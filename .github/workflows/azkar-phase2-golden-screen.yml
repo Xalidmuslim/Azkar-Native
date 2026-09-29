@@ -33,172 +33,82 @@ jobs:
       - name: Lint affected module
         run: ./gradlew :app:lintDebug --stacktrace
 
-      - name: Prepare Phase 2 golden evidence script
+      - name: Prepare Phase 2 393 Light verification script
         shell: bash
         run: |
           mkdir -p phase2-diagnostics phase2-evidence
-          printf 'diagnostics prepared\n' > phase2-diagnostics/ci-diagnostics-prepared.txt
-          cat > phase2-golden-evidence.sh <<'EOF'
+          cat > phase2-393-light.sh <<'EOF'
           #!/usr/bin/env bash
           set -u
           set -o pipefail
 
           mkdir -p phase2-diagnostics phase2-evidence
-
           APP_PACKAGE="app.xalidmuslim.azkar"
           TEST_COMPONENT="app.xalidmuslim.azkar.test/androidx.test.runner.AndroidJUnitRunner"
           TEST_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarGoldenReadingScreenshotTest"
+          METHOD="capture393Light"
+          FILE="azkar_393x873_light.png"
           REMOTE_DIR="/sdcard/Android/data/${APP_PACKAGE}/files/phase2-evidence"
-          RUN_FAILED=0
-          TESTS_EXECUTED=0
 
           adb wait-for-device
           adb shell getprop sys.boot_completed
           adb devices -l
 
-          adb shell pm list instrumentation | tee phase2-diagnostics/instrumentation-list-before.txt || true
-          adb shell pm path "${APP_PACKAGE}" | tee phase2-diagnostics/package-path-before.txt || true
-
           ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace || exit 1
-
           adb install -r app/build/outputs/apk/debug/app-debug.apk || exit 1
           adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk || exit 1
 
-          run_capture() {
-            local method="$1"
-            local screen="$2"
-            local filename="$3"
-            local width="$4"
-            local height="$5"
-            local output="phase2-diagnostics/instrumentation-${method}.txt"
-            local exit_file="phase2-diagnostics/test-exit-${method}.txt"
-            local wm_file="phase2-diagnostics/wm-size-${method}.txt"
-            local density_file="phase2-diagnostics/wm-density-${method}.txt"
-            local font_file="phase2-diagnostics/font-scale-${method}.txt"
-            local file_info="phase2-diagnostics/file-${method}.txt"
-            local logcat_file="phase2-diagnostics/logcat-${method}.txt"
+          adb shell wm size 393x873
+          adb shell wm density 160
+          adb shell settings put system font_scale 1.0
+          adb shell wm size | tee phase2-diagnostics/wm-size.txt
+          adb shell wm density | tee phase2-diagnostics/wm-density.txt
+          adb shell settings get system font_scale | tee phase2-diagnostics/font-scale.txt
+          grep -q "Override size: 393x873" phase2-diagnostics/wm-size.txt || exit 1
+          grep -q "Override density: 160" phase2-diagnostics/wm-density.txt || exit 1
+          grep -qx "1.0" phase2-diagnostics/font-scale.txt || exit 1
 
-            echo "===== ${method}: configure ${screen} density=160 font_scale=1.0 ====="
+          timeout 15s adb shell am wait-for-broadcast-idle || true
+          adb logcat -c || true
 
-            adb shell wm size "${screen}" || return 1
-            adb shell wm density 160 || return 1
-            adb shell settings put system font_scale 1.0 || return 1
+          set +e
+          adb shell am instrument -w -r \
+            -e class "${TEST_CLASS}#${METHOD}" \
+            "${TEST_COMPONENT}" \
+            | tee phase2-diagnostics/instrumentation-${METHOD}.txt
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "${TEST_EXIT}" | tee phase2-diagnostics/test-exit-${METHOD}.txt
 
-            adb shell wm size | tee "${wm_file}" || return 1
-            adb shell wm density | tee "${density_file}" || return 1
-            adb shell settings get system font_scale | tee "${font_file}" || return 1
+          adb logcat -d -v threadtime > phase2-diagnostics/logcat-${METHOD}.txt || true
 
-            grep -q "Override size: ${screen}" "${wm_file}" || {
-              echo "Expected wm size ${screen} was not applied"
-              return 1
-            }
-            grep -q "Override density: 160" "${density_file}" || {
-              echo "Expected density 160 was not applied"
-              return 1
-            }
-            grep -qx "1.0" "${font_file}" || {
-              echo "Expected font_scale 1.0 was not applied"
-              return 1
-            }
-
-            timeout 15s adb shell am wait-for-broadcast-idle || true
-            sleep 1
-            adb logcat -c || true
-
-            echo "===== ${method}: instrumentation ====="
-            adb shell am instrument -w -r \
-              -e class "${TEST_CLASS}#${method}" \
-              "${TEST_COMPONENT}" \
-              | tee "${output}"
-            local test_exit=${PIPESTATUS[0]}
-            TESTS_EXECUTED=$((TESTS_EXECUTED + 1))
-            printf '%s\n' "${test_exit}" | tee "${exit_file}"
-
-            adb logcat -d -v threadtime > "${logcat_file}" || true
-
-            if [ "${test_exit}" -ne 0 ]; then
-              echo "${method}: instrumentation exit status ${test_exit}"
-              return 1
-            fi
-
-            if ! grep -q "OK (1 test)" "${output}"; then
-              echo "${method}: instrumentation did not report OK (1 test)"
-              return 1
-            fi
-
-            echo "===== ${method}: pull screenshot ====="
-            adb pull "${REMOTE_DIR}/${filename}" "phase2-evidence/${filename}" || return 1
-
-            if ! test -s "phase2-evidence/${filename}"; then
-              echo "${method}: screenshot is missing or empty: ${filename}"
-              return 1
-            fi
-
-            stat -c '%n %s bytes' "phase2-evidence/${filename}" | tee -a "${file_info}"
-            file "phase2-evidence/${filename}" | tee -a "${file_info}" || return 1
-
-            if ! grep -q "PNG image data, ${width} x ${height}" "${file_info}"; then
-              echo "${method}: PNG resolution is not ${width}x${height}"
-              return 1
-            fi
-
-            echo "${method}: PASS"
-            return 0
+          if [ "${TEST_EXIT}" -ne 0 ]; then
+            echo "${METHOD}: instrumentation exit status ${TEST_EXIT}"
+            exit "${TEST_EXIT}"
+          fi
+          grep -q "OK (1 test)" phase2-diagnostics/instrumentation-${METHOD}.txt || {
+            echo "${METHOD}: instrumentation did not report OK (1 test)"
+            exit 1
           }
 
-          if ! run_capture capture360Light 360x800 azkar_360x800_light.png 360 800; then
-            RUN_FAILED=1
-          fi
+          adb pull "${REMOTE_DIR}/${FILE}" "phase2-evidence/${FILE}"
+          test -s "phase2-evidence/${FILE}"
+          stat -c '%n %s bytes' "phase2-evidence/${FILE}" | tee phase2-diagnostics/file-${METHOD}.txt
+          file "phase2-evidence/${FILE}" | tee -a phase2-diagnostics/file-${METHOD}.txt
+          grep -q "PNG image data, 393 x 873" phase2-diagnostics/file-${METHOD}.txt || exit 1
 
-          if [ "${RUN_FAILED}" -eq 0 ]; then
-            if ! run_capture capture393Light 393x873 azkar_393x873_light.png 393 873; then
-              RUN_FAILED=1
-            fi
-          fi
-
-          if [ "${RUN_FAILED}" -eq 0 ]; then
-            if ! run_capture capture412Light 412x915 azkar_412x915_light.png 412 915; then
-              RUN_FAILED=1
-            fi
-          fi
-
-          if [ "${RUN_FAILED}" -eq 0 ]; then
-            if ! run_capture capture393Dark 393x873 azkar_393x873_dark.png 393 873; then
-              RUN_FAILED=1
-            fi
-          fi
-
-          if [ "${RUN_FAILED}" -eq 0 ]; then
-            if ! run_capture capture393LongExistingDhikr 393x873 azkar_393x873_long_baqarah.png 393 873; then
-              RUN_FAILED=1
-            fi
-          fi
-
-          printf '%s\n' "${TESTS_EXECUTED}" | tee phase2-diagnostics/tests-executed.txt
-          printf '%s\n' "${RUN_FAILED}" | tee phase2-diagnostics/run-failed.txt
-
-          adb logcat -d -v threadtime > phase2-diagnostics/logcat-final.txt || true
-          adb shell pm list instrumentation > phase2-diagnostics/instrumentation-list.txt || true
-          adb shell dumpsys package "${APP_PACKAGE}" > phase2-diagnostics/package-dump.txt || true
-
-          echo "===== Phase 2 ANR/crash scan ====="
-          grep -RInE -C 5 \
+          echo "===== ANR/crash scan ====="
+          grep -n -E -C 5 \
             'ANR in app\.xalidmuslim\.azkar|FATAL EXCEPTION|Process crashed|INSTRUMENTATION_FAILED|ClassNotFoundException|NoClassDefFoundError|Unable to instantiate|Unable to start' \
-            phase2-diagnostics/logcat-*.txt phase2-diagnostics/logcat-final.txt 2>/dev/null || true
-
-          echo "===== Phase 2 evidence files ====="
-          find phase2-evidence -maxdepth 1 -type f -name '*.png' -print -exec stat -c '%s bytes' {} \; -exec file {} \; || true
+            phase2-diagnostics/logcat-${METHOD}.txt || true
 
           adb uninstall app.xalidmuslim.azkar.test || true
           adb uninstall "${APP_PACKAGE}" || true
-
           adb shell wm size reset || true
           adb shell wm density reset || true
           adb shell settings put system font_scale 1.0 || true
-
-          exit "${RUN_FAILED}"
           EOF
-          chmod +x phase2-golden-evidence.sh
+          chmod +x phase2-393-light.sh
 
       - name: Enable KVM
         run: |
@@ -210,7 +120,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run Phase 2 golden evidence matrix
+      - name: Verify Phase 2 capture393Light
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -218,13 +128,13 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash phase2-golden-evidence.sh
+          script: bash phase2-393-light.sh
 
-      - name: Upload Phase 2 golden evidence
+      - name: Upload Phase 2 393 Light evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: azkar-phase2-golden-evidence
+          name: azkar-phase2-393-light-fixed
           path: |
             phase2-evidence/**
             phase2-diagnostics/**

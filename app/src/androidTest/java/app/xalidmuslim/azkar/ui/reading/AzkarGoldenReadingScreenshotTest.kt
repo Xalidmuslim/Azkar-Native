@@ -1,6 +1,8 @@
 package app.xalidmuslim.azkar.ui.reading
 
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -112,7 +114,7 @@ class AzkarGoldenReadingScreenshotTest {
 
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("azkar-reading-screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("azkar-arabic").fetchSemanticsNode()
+        composeRule.onNodeWithTag("azkar-arabic").assertIsDisplayed()
         composeRule.onNodeWithTag("azkar-translation").fetchSemanticsNode()
         composeRule.onNodeWithTag("azkar-source").fetchSemanticsNode()
         composeRule.onNodeWithTag("azkar-note").fetchSemanticsNode()
@@ -120,11 +122,7 @@ class AzkarGoldenReadingScreenshotTest {
             composeRule.onNodeWithTag("azkar-disputed").fetchSemanticsNode()
         }
 
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        UiDevice.getInstance(instrumentation).waitForIdle()
-        val screenshot = instrumentation.uiAutomation.takeScreenshot()
-        assertEquals(expectedWidth, screenshot.width)
-        assertEquals(expectedHeight, screenshot.height)
+        val screenshot = captureAfterPresentedFrame(expectedWidth, expectedHeight)
         saveScreenshot(screenshot, fileName)
 
         composeRule.onNodeWithTag("azkar-arabic").performScrollTo().assertIsDisplayed()
@@ -135,6 +133,68 @@ class AzkarGoldenReadingScreenshotTest {
         composeRule.onNodeWithTag("azkar-counter").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("azkar-pager").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("azkar-footer").performScrollTo().assertIsDisplayed()
+    }
+
+    private fun captureAfterPresentedFrame(expectedWidth: Int, expectedHeight: Int): Bitmap {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val device = UiDevice.getInstance(instrumentation)
+
+        repeat(MAX_SCREENSHOT_ATTEMPTS) { attempt ->
+            composeRule.waitForIdle()
+            instrumentation.waitForIdleSync()
+            device.waitForIdle()
+            SystemClock.sleep(if (attempt == 0) INITIAL_PRESENT_WAIT_MS else RETRY_PRESENT_WAIT_MS)
+
+            val screenshot = instrumentation.uiAutomation.takeScreenshot()
+            assertEquals(expectedWidth, screenshot.width)
+            assertEquals(expectedHeight, screenshot.height)
+
+            if (hasRenderedComposeBody(screenshot)) {
+                return screenshot
+            }
+        }
+
+        error(
+            "Physical screenshot surface stayed visually blank after " +
+                "$MAX_SCREENSHOT_ATTEMPTS bounded attempts",
+        )
+    }
+
+    private fun hasRenderedComposeBody(bitmap: Bitmap): Boolean {
+        val left = (bitmap.width * 10) / 100
+        val right = (bitmap.width * 90) / 100
+        val top = (bitmap.height * 20) / 100
+        val bottom = (bitmap.height * 82) / 100
+
+        val quantizedColors = HashSet<Int>()
+        var minLuma = 255
+        var maxLuma = 0
+        var samples = 0
+
+        var y = top
+        while (y < bottom) {
+            var x = left
+            while (x < right) {
+                val color = bitmap.getPixel(x, y)
+                val red = Color.red(color)
+                val green = Color.green(color)
+                val blue = Color.blue(color)
+                val quantized =
+                    ((red ushr 4) shl 8) or ((green ushr 4) shl 4) or (blue ushr 4)
+                quantizedColors += quantized
+
+                val luma = (red + green + blue) / 3
+                if (luma < minLuma) minLuma = luma
+                if (luma > maxLuma) maxLuma = luma
+                samples += 1
+                x += PIXEL_SAMPLE_STEP
+            }
+            y += PIXEL_SAMPLE_STEP
+        }
+
+        return samples > 0 &&
+            quantizedColors.size >= MIN_DISTINCT_COLORS &&
+            (maxLuma - minLuma) >= MIN_LUMA_RANGE
     }
 
     private fun saveScreenshot(bitmap: Bitmap, fileName: String) {
@@ -152,5 +212,14 @@ class AzkarGoldenReadingScreenshotTest {
         check(file.isFile && file.length() > 0L) {
             "Screenshot evidence was not written: $fileName"
         }
+    }
+
+    private companion object {
+        const val MAX_SCREENSHOT_ATTEMPTS = 5
+        const val INITIAL_PRESENT_WAIT_MS = 350L
+        const val RETRY_PRESENT_WAIT_MS = 175L
+        const val PIXEL_SAMPLE_STEP = 8
+        const val MIN_DISTINCT_COLORS = 6
+        const val MIN_LUMA_RANGE = 12
     }
 }
