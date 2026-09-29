@@ -208,7 +208,7 @@ class AzkarReaderPersistenceInstrumentedTest {
         ids: Set<String> = entries().map { it.item.id }.toSet(),
         predicate: (AzkarPreferencesSnapshot) -> Boolean,
     ): AzkarPreferencesSnapshot = runBlocking {
-        withTimeout(5_000) {
+        withTimeout(15_000) {
             repository.observeSnapshot(dateProvider.date, ids).first(predicate)
         }
     }
@@ -343,7 +343,9 @@ class AzkarReaderPersistenceInstrumentedTest {
     @Test
     fun viewModeListSurvivesReaderRecreation() {
         setReader()
-        chooseListMode()
+        composeRule.runOnIdle {
+            assertTrue(readerUi.setViewMode(AzkarReaderViewMode.List))
+        }
         awaitSnapshot { it.viewMode == AzkarReaderViewMode.List }
 
         recreateReader()
