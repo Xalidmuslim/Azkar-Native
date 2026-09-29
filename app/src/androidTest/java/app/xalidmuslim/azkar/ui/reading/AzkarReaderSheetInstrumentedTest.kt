@@ -89,6 +89,7 @@ class AzkarReaderSheetInstrumentedTest {
         composeRule.runOnIdle { assertTrue(navigation.currentScrollY > 0) }
 
         composeRule.onNodeWithTag(AzkarReadingTestTags.OpenContents)
+            .performScrollTo()
             .assertIsDisplayed()
             .performClick()
         composeRule.waitForIdle()
@@ -109,8 +110,12 @@ class AzkarReaderSheetInstrumentedTest {
     @Test
     fun explanationBackPreservesReaderContext() {
         setReader()
+        repeat(3) {
+            composeRule.onNodeWithTag(AzkarReadingTestTags.Card)
+                .performTouchInput { swipeUp() }
+            composeRule.waitForIdle()
+        }
         composeRule.onNodeWithTag(AzkarReadingTestTags.Explain)
-            .performScrollTo()
             .assertIsDisplayed()
             .performClick()
         composeRule.waitForIdle()
