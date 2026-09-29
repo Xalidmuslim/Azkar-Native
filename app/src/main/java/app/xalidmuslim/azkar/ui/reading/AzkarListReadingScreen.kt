@@ -26,6 +26,8 @@ import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarSpacing
 import app.xalidmuslim.azkar.ui.designsystem.AzkarSurface
 
+internal const val AzkarListCardStartIndex = 2
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AzkarListReadingScreen(
