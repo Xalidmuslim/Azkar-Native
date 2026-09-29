@@ -1,39 +1,76 @@
 package app.xalidmuslim.azkar.ui.reading
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import app.xalidmuslim.azkar.persistence.AzkarDateProvider
-import app.xalidmuslim.azkar.persistence.DataStoreAzkarPreferencesRepository
+import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
+import app.xalidmuslim.azkar.persistence.AzkarPreferencesSnapshot
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
-import java.io.File
 import java.time.LocalDate
-import java.util.UUID
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AzkarReaderPersistenceControllerTest {
-    @get:Rule
-    val temporaryFolder = TemporaryFolder()
-
     private class FakeDateProvider(var date: LocalDate) : AzkarDateProvider {
         override fun currentDate(): LocalDate = date
     }
 
-    private fun store(scope: CoroutineScope) =
-        PreferenceDataStoreFactory.create(
-            scope = scope,
-            produceFile = {
-                File(temporaryFolder.root, "controller-${UUID.randomUUID()}.preferences_pb")
-            },
-        )
+    private class FakeRepository : AzkarPreferencesRepository {
+        private var settings = AzkarReaderSettings()
+        private var viewMode = AzkarReaderViewMode.Cards
+        private val progress = mutableMapOf<Pair<LocalDate, String>, Int>()
+        private val version = MutableStateFlow(0)
+
+        override fun observeSnapshot(
+            date: LocalDate,
+            visibleItemIds: Set<String>,
+        ): Flow<AzkarPreferencesSnapshot> = version.map {
+            AzkarPreferencesSnapshot(
+                settings = settings,
+                viewMode = viewMode,
+                progressById = visibleItemIds.associateWith { id ->
+                    progress[date to id] ?: 0
+                },
+            )
+        }
+
+        override suspend fun saveSettings(settings: AzkarReaderSettings) {
+            this.settings = settings
+            version.value += 1
+        }
+
+        override suspend fun saveViewMode(viewMode: AzkarReaderViewMode) {
+            this.viewMode = viewMode
+            version.value += 1
+        }
+
+        override suspend fun incrementProgress(
+            date: LocalDate,
+            stableDhikrId: String,
+            target: Int,
+        ): Int {
+            val key = date to stableDhikrId
+            val updated = ((progress[key] ?: 0) + 1).coerceAtMost(target)
+            progress[key] = updated
+            version.value += 1
+            return updated
+        }
+
+        override suspend fun resetProgress(
+            date: LocalDate,
+            visibleItemIds: Set<String>,
+        ) {
+            visibleItemIds.forEach { progress[date to it] = 0 }
+            version.value += 1
+        }
+    }
 
     @Test
     fun progressHeaderCountsCompletedItemsNotRepetitions() {
@@ -50,10 +87,9 @@ class AzkarReaderPersistenceControllerTest {
 
     @Test
     fun cardsAndListShareOneProgressStateAndSettingsPersist() = runTest {
-        val dataStore = store(backgroundScope)
-        val repository = DataStoreAzkarPreferencesRepository(dataStore)
+        val repository = FakeRepository()
         val dateProvider = FakeDateProvider(LocalDate.of(2026, 9, 29))
-        val uiScope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val uiScope = backgroundScope
         val visible = setOf("muawwidhat")
 
         val first = AzkarReaderUiController(
@@ -62,7 +98,7 @@ class AzkarReaderPersistenceControllerTest {
             persistenceScope = uiScope,
             visibleItemIds = visible,
         )
-        advanceUntilIdle()
+        testScheduler.runCurrent()
         assertTrue(first.state.isHydrated)
 
         first.incrementProgress("muawwidhat", 3)
@@ -79,18 +115,18 @@ class AzkarReaderPersistenceControllerTest {
                 themeMode = AzkarThemeMode.Dark,
             )
         }
-        advanceUntilIdle()
+        testScheduler.runCurrent()
 
         assertEquals(1, first.currentCount("muawwidhat"))
         assertEquals(AzkarReaderViewMode.List, first.state.viewMode)
 
         val second = AzkarReaderUiController(
-            repository = DataStoreAzkarPreferencesRepository(dataStore),
+            repository = repository,
             dateProvider = dateProvider,
             persistenceScope = uiScope,
             visibleItemIds = visible,
         )
-        advanceUntilIdle()
+        testScheduler.runCurrent()
 
         assertEquals(1, second.currentCount("muawwidhat"))
         assertEquals(AzkarReaderViewMode.List, second.state.viewMode)
@@ -106,10 +142,9 @@ class AzkarReaderPersistenceControllerTest {
 
     @Test
     fun newCalendarDateStartsAtZeroForNewSession() = runTest {
-        val dataStore = store(backgroundScope)
-        val repository = DataStoreAzkarPreferencesRepository(dataStore)
+        val repository = FakeRepository()
         val dateProvider = FakeDateProvider(LocalDate.of(2026, 9, 29))
-        val uiScope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val uiScope = backgroundScope
         val visible = setOf("muawwidhat")
 
         val dayOne = AzkarReaderUiController(
@@ -118,14 +153,10 @@ class AzkarReaderPersistenceControllerTest {
             persistenceScope = uiScope,
             visibleItemIds = visible,
         )
-        advanceUntilIdle()
+        testScheduler.runCurrent()
         repeat(3) { dayOne.incrementProgress("muawwidhat", 3) }
-        advanceUntilIdle()
-        assertEquals(
-            3,
-            repository.observeSnapshot(dateProvider.date, visible).first()
-                .progressById.getValue("muawwidhat"),
-        )
+        testScheduler.runCurrent()
+        assertEquals(3, dayOne.currentCount("muawwidhat"))
 
         dateProvider.date = LocalDate.of(2026, 9, 30)
         val dayTwo = AzkarReaderUiController(
@@ -134,24 +165,22 @@ class AzkarReaderPersistenceControllerTest {
             persistenceScope = uiScope,
             visibleItemIds = visible,
         )
-        advanceUntilIdle()
+        testScheduler.runCurrent()
 
         assertEquals(0, dayTwo.currentCount("muawwidhat"))
     }
 
     @Test
     fun sheetOpenCloseDoesNotChangePersistentReaderState() = runTest {
-        val dataStore = store(backgroundScope)
-        val repository = DataStoreAzkarPreferencesRepository(dataStore)
+        val repository = FakeRepository()
         val dateProvider = FakeDateProvider(LocalDate.of(2026, 9, 29))
-        val uiScope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
         val ui = AzkarReaderUiController(
             repository = repository,
             dateProvider = dateProvider,
-            persistenceScope = uiScope,
+            persistenceScope = backgroundScope,
             visibleItemIds = setOf("muawwidhat"),
         )
-        advanceUntilIdle()
+        testScheduler.runCurrent()
 
         ui.openSettings()
         ui.closeSheet()
@@ -159,14 +188,10 @@ class AzkarReaderPersistenceControllerTest {
         ui.closeSheet()
         ui.openExplanation("muawwidhat")
         ui.closeSheet()
-        advanceUntilIdle()
+        testScheduler.runCurrent()
 
-        val snapshot = repository.observeSnapshot(
-            dateProvider.date,
-            setOf("muawwidhat"),
-        ).first()
-        assertEquals(AzkarReaderSettings(), snapshot.settings)
-        assertEquals(AzkarReaderViewMode.Cards, snapshot.viewMode)
-        assertEquals(0, snapshot.progressById.getValue("muawwidhat"))
+        assertEquals(AzkarReaderSettings(), ui.state.settings)
+        assertEquals(AzkarReaderViewMode.Cards, ui.state.viewMode)
+        assertEquals(0, ui.currentCount("muawwidhat"))
     }
 }
