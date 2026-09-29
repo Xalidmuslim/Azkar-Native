@@ -155,11 +155,12 @@ class AzkarPhase4PersistenceScreenshotTest {
         }
 
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(AzkarReadingTestTags.Card).assertIsDisplayed()
-        composeRule.onNodeWithTag(AzkarReadingTestTags.CountActionPrefix + target.id)
+        composeRule.onNodeWithTag(AzkarReadingTestTags.Card)
             .performScrollTo()
             .assertIsDisplayed()
-        composeRule.onNodeWithText("1 / 3").assertIsDisplayed()
+        composeRule.onNodeWithText("1 / 3")
+            .performScrollTo()
+            .assertIsDisplayed()
         composeRule.waitForIdle()
 
         val screenshot = captureAfterPresentedFrame()
