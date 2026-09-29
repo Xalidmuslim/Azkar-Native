@@ -178,9 +178,7 @@ fun AzkarReaderScreen(
     }
     val gestureModifier = Modifier
         .azkarHorizontalPaging(
-            enabled = readerUi.viewMode == AzkarReaderViewMode.Cards &&
-                entries.size > 1 &&
-                readerUi.activeSheet == AzkarReaderSheet.None,
+            enabled = readerUi.allowsHorizontalPaging(entries.size),
             onPrevious = previous,
             onNext = next,
         )
