@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
 import app.xalidmuslim.azkar.ui.designsystem.AzkarTheme
 import kotlinx.coroutines.coroutineScope
@@ -69,6 +70,10 @@ fun AzkarReaderScreen(
     val readingScrollState = remember(navigation.generation, readerUi.viewMode) { ScrollState(0) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val listScrollMarginPx = with(density) {
+        AzkarDimensions.dhikrScrollMarginTop.roundToPx()
+    }
 
     LaunchedEffect(readingScrollState) {
         snapshotFlow { readingScrollState.value }.collect(controller::recordScrollY)
@@ -76,7 +81,10 @@ fun AzkarReaderScreen(
 
     LaunchedEffect(readerUi.viewMode) {
         if (readerUi.viewMode == AzkarReaderViewMode.List) {
-            listState.animateScrollToItem(AzkarListCardStartIndex + activeIndex)
+            listState.animateScrollToItem(
+                index = AzkarListCardStartIndex + activeIndex,
+                scrollOffset = -listScrollMarginPx,
+            )
         }
     }
 
@@ -90,7 +98,10 @@ fun AzkarReaderScreen(
         if (controller.back() && readerUi.viewMode == AzkarReaderViewMode.List) {
             val destination = controller.state.activeIndex
             scope.launch {
-                listState.animateScrollToItem(AzkarListCardStartIndex + destination)
+                listState.animateScrollToItem(
+                    index = AzkarListCardStartIndex + destination,
+                    scrollOffset = -listScrollMarginPx,
+                )
             }
         }
     }
@@ -103,7 +114,6 @@ fun AzkarReaderScreen(
             1f,
         ) > 0f
     }
-    val density = LocalDensity.current
     val startOffsetPx = with(density) {
         when (navigation.direction) {
             AzkarNavigationDirection.Next -> AzkarMotion.nextStartOffsetX.toPx()
@@ -257,7 +267,10 @@ fun AzkarReaderScreen(
                             controller.selectAnchor(index)
                             resolvedUiController.closeSheet()
                             scope.launch {
-                                listState.animateScrollToItem(AzkarListCardStartIndex + index)
+                                listState.animateScrollToItem(
+                                    index = AzkarListCardStartIndex + index,
+                                    scrollOffset = -listScrollMarginPx,
+                                )
                             }
                         }
                     }
