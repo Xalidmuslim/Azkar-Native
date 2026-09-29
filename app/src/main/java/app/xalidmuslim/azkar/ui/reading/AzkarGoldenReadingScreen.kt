@@ -79,6 +79,8 @@ internal object AzkarReadingTestTags {
     const val OpenContents = "azkar-open-contents"
     const val OpenSettingsTop = "azkar-open-settings-top"
     const val OpenSettingsToolbar = "azkar-open-settings-toolbar"
+    const val List = "azkar-reader-list"
+    const val ListCardPrefix = "azkar-list-card-"
 }
 
 private const val SourceNoteText =
@@ -159,7 +161,7 @@ fun AzkarGoldenReadingScreen(
 }
 
 @Composable
-private fun AzkarHeader(onOpenSettings: () -> Unit) {
+internal fun AzkarHeader(onOpenSettings: () -> Unit) {
     val colors = AzkarThemeValues.colors
     Row(
         modifier = Modifier
@@ -222,7 +224,7 @@ private fun AzkarHeader(onOpenSettings: () -> Unit) {
 }
 
 @Composable
-private fun AzkarSourceNote() {
+internal fun AzkarSourceNote() {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.sourceNote)
     Box(
@@ -245,7 +247,7 @@ private fun AzkarSourceNote() {
 }
 
 @Composable
-private fun AzkarPeriodTabs(period: AzkarPeriod) {
+internal fun AzkarPeriodTabs(period: AzkarPeriod) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.periodTabs)
     Row(
@@ -297,7 +299,7 @@ private fun AzkarPeriodButton(text: String, active: Boolean, modifier: Modifier)
 }
 
 @Composable
-private fun AzkarProgressCard(state: AzkarGoldenReadingUiState) {
+internal fun AzkarProgressCard(state: AzkarGoldenReadingUiState) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.progressCard)
     val roundedPercent = if (state.total == 0) 0
@@ -357,11 +359,12 @@ private fun buildProgressLabel(state: AzkarGoldenReadingUiState): AnnotatedStrin
 }
 
 @Composable
-private fun AzkarReaderToolbar(
+internal fun AzkarReaderToolbar(
     state: AzkarGoldenReadingUiState,
     narrow: Boolean,
     onOpenContents: () -> Unit,
     onOpenSettings: () -> Unit,
+    positionText: String? = null,
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.readingToolbar)
@@ -385,7 +388,7 @@ private fun AzkarReaderToolbar(
         )
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             BasicText(
-                text = "${state.position} из ${state.total}",
+                text = positionText ?: "${state.position} из ${state.total}",
                 style = AzkarThemeValues.typography.toolbarPosition.copy(color = colors.muted),
             )
         }
@@ -431,7 +434,7 @@ private fun AzkarToolbarButton(
 }
 
 @Composable
-private fun AzkarDhikrCard(
+internal fun AzkarDhikrCard(
     state: AzkarGoldenReadingUiState,
     narrow: Boolean,
     scrollState: ScrollState?,
@@ -832,7 +835,7 @@ private fun AzkarPagerButton(
 }
 
 @Composable
-private fun AzkarFooter() {
+internal fun AzkarFooter() {
     val colors = AzkarThemeValues.colors
     BasicText(
         text = FooterText,
