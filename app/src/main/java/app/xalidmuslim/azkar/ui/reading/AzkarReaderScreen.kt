@@ -7,10 +7,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -64,10 +66,18 @@ fun AzkarReaderScreen(
     val activeIndex = navigation.activeIndex.coerceIn(entries.indices)
     val active = entries[activeIndex]
     val shellScrollState = rememberScrollState()
-    val readingScrollState = remember(navigation.generation) { ScrollState(0) }
+    val readingScrollState = remember(navigation.generation, readerUi.viewMode) { ScrollState(0) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(readingScrollState) {
         snapshotFlow { readingScrollState.value }.collect(controller::recordScrollY)
+    }
+
+    LaunchedEffect(readerUi.viewMode) {
+        if (readerUi.viewMode == AzkarReaderViewMode.List) {
+            listState.animateScrollToItem(AzkarListCardStartIndex + activeIndex)
+        }
     }
 
     BackHandler(enabled = readerUi.activeSheet != AzkarReaderSheet.None) {
@@ -77,7 +87,12 @@ fun AzkarReaderScreen(
         enabled = readerUi.activeSheet == AzkarReaderSheet.None &&
             navigation.history.isNotEmpty(),
     ) {
-        controller.back()
+        if (controller.back() && readerUi.viewMode == AzkarReaderViewMode.List) {
+            val destination = controller.state.activeIndex
+            scope.launch {
+                listState.animateScrollToItem(AzkarListCardStartIndex + destination)
+            }
+        }
     }
 
     val context = LocalContext.current
@@ -144,16 +159,28 @@ fun AzkarReaderScreen(
     )
 
     val previous: () -> Unit = {
-        if (readerUi.activeSheet == AzkarReaderSheet.None) controller.previous()
+        if (
+            readerUi.viewMode == AzkarReaderViewMode.Cards &&
+            readerUi.activeSheet == AzkarReaderSheet.None
+        ) {
+            controller.previous()
+        }
         Unit
     }
     val next: () -> Unit = {
-        if (readerUi.activeSheet == AzkarReaderSheet.None) controller.next()
+        if (
+            readerUi.viewMode == AzkarReaderViewMode.Cards &&
+            readerUi.activeSheet == AzkarReaderSheet.None
+        ) {
+            controller.next()
+        }
         Unit
     }
     val gestureModifier = Modifier
         .azkarHorizontalPaging(
-            enabled = entries.size > 1 && readerUi.activeSheet == AzkarReaderSheet.None,
+            enabled = readerUi.viewMode == AzkarReaderViewMode.Cards &&
+                entries.size > 1 &&
+                readerUi.activeSheet == AzkarReaderSheet.None,
             onPrevious = previous,
             onNext = next,
         )
@@ -171,22 +198,43 @@ fun AzkarReaderScreen(
         readerLineHeight = settings.lineHeight,
     ) {
         Box(modifier = modifier.fillMaxSize()) {
-            AzkarGoldenReadingScreen(
-                state = uiState,
-                modifier = Modifier.fillMaxSize(),
-                onPrevious = previous,
-                onNext = next,
-                shellScrollState = shellScrollState,
-                readingScrollState = readingScrollState,
-                readingAreaModifier = gestureModifier,
-                onOpenSettings = resolvedUiController::openSettings,
-                onOpenContents = resolvedUiController::openContents,
-                onOpenExplanation = resolvedUiController::openExplanation,
-                compactReader = settings.readerStyle == AzkarReaderStyle.Compact,
-                showTranslation = settings.showTranslation,
-                showSources = settings.showSources,
-                showNotes = settings.showNotes,
-            )
+            when (readerUi.viewMode) {
+                AzkarReaderViewMode.Cards -> {
+                    AzkarGoldenReadingScreen(
+                        state = uiState,
+                        modifier = Modifier.fillMaxSize(),
+                        onPrevious = previous,
+                        onNext = next,
+                        shellScrollState = shellScrollState,
+                        readingScrollState = readingScrollState,
+                        readingAreaModifier = gestureModifier,
+                        onOpenSettings = resolvedUiController::openSettings,
+                        onOpenContents = resolvedUiController::openContents,
+                        onOpenExplanation = resolvedUiController::openExplanation,
+                        compactReader = settings.readerStyle == AzkarReaderStyle.Compact,
+                        showTranslation = settings.showTranslation,
+                        showSources = settings.showSources,
+                        showNotes = settings.showNotes,
+                    )
+                }
+
+                AzkarReaderViewMode.List -> {
+                    AzkarListReadingScreen(
+                        entries = entries,
+                        period = period,
+                        activeIndex = activeIndex,
+                        listState = listState,
+                        settings = settings,
+                        modifier = Modifier.fillMaxSize(),
+                        onOpenSettings = resolvedUiController::openSettings,
+                        onOpenContents = resolvedUiController::openContents,
+                        onOpenExplanation = { index, itemId ->
+                            controller.selectAnchor(index)
+                            resolvedUiController.openExplanation(itemId)
+                        },
+                    )
+                }
+            }
 
             AzkarReaderSheetHost(
                 activeSheet = readerUi.activeSheet,
@@ -194,13 +242,30 @@ fun AzkarReaderScreen(
                 activeIndex = activeIndex,
                 selectedExplanationId = readerUi.selectedExplanationId,
                 settings = settings,
+                viewMode = readerUi.viewMode,
                 onDismiss = { resolvedUiController.closeSheet() },
                 onSelectContents = { index ->
-                    if (index == controller.state.activeIndex) {
-                        controller.reopenCurrentAtTop()
-                    } else {
-                        controller.navigateTo(index)
+                    when (readerUi.viewMode) {
+                        AzkarReaderViewMode.Cards -> {
+                            if (index == controller.state.activeIndex) {
+                                controller.reopenCurrentAtTop()
+                            } else {
+                                controller.navigateTo(index)
+                            }
+                            resolvedUiController.closeSheet()
+                        }
+
+                        AzkarReaderViewMode.List -> {
+                            controller.selectAnchor(index)
+                            resolvedUiController.closeSheet()
+                            scope.launch {
+                                listState.animateScrollToItem(AzkarListCardStartIndex + index)
+                            }
+                        }
                     }
+                },
+                onViewModeChange = { mode ->
+                    resolvedUiController.setViewMode(mode)
                     resolvedUiController.closeSheet()
                 },
                 onUpdateSettings = resolvedUiController::updateSettings,
