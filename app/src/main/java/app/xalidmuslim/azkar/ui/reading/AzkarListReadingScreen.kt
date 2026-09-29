@@ -39,10 +39,12 @@ internal fun AzkarListReadingScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit,
     onOpenContents: () -> Unit,
+    onIncrementCount: (String, Int) -> Unit,
+    onResetProgress: () -> Unit,
     onOpenExplanation: (Int, String) -> Unit,
 ) {
     val selected = entries[activeIndex.coerceIn(entries.indices)]
-    val completedItems = entries.count { it.currentCount >= it.item.count }
+    val completedItems = countCompletedItems(entries)
     val summaryState = AzkarGoldenReadingUiState(
         item = selected.item,
         period = period,
@@ -76,7 +78,7 @@ internal fun AzkarListReadingScreen(
                         AzkarHeader(onOpenSettings)
                         AzkarSourceNote()
                         AzkarPeriodTabs(period)
-                        AzkarProgressCard(summaryState)
+                        AzkarProgressCard(summaryState, onResetProgress)
                     }
                 }
 
@@ -119,6 +121,9 @@ internal fun AzkarListReadingScreen(
                             showNotes = settings.showNotes,
                             onOpenExplanation = {
                                 onOpenExplanation(index, entry.item.id)
+                            },
+                            onIncrementCount = {
+                                onIncrementCount(entry.item.id, entry.item.count)
                             },
                         )
                     }
