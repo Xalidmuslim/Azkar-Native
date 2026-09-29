@@ -43,7 +43,12 @@ data class AzkarReaderUiState(
     val selectedExplanationId: String? = null,
     val settings: AzkarReaderSettings = AzkarReaderSettings(),
     val viewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
-)
+) {
+    fun allowsHorizontalPaging(entryCount: Int): Boolean =
+        viewMode == AzkarReaderViewMode.Cards &&
+            activeSheet == AzkarReaderSheet.None &&
+            entryCount > 1
+}
 
 class AzkarReaderUiController(
     initialSettings: AzkarReaderSettings = AzkarReaderSettings(),
