@@ -88,7 +88,13 @@ class AzkarReaderSheetInstrumentedTest {
         composeRule.waitForIdle()
         composeRule.runOnIdle { assertTrue(navigation.currentScrollY > 0) }
 
-        composeRule.onNodeWithTag(AzkarReadingTestTags.OpenContents).performClick()
+        composeRule.onNodeWithTag(AzkarReadingTestTags.OpenContents)
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals(AzkarReaderSheet.Contents, readerUi.state.activeSheet)
+        }
         composeRule.onNodeWithTag(AzkarSheetTestTags.Contents).assertIsDisplayed()
         composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + 1).performClick()
         composeRule.waitForIdle()
@@ -103,12 +109,16 @@ class AzkarReaderSheetInstrumentedTest {
     @Test
     fun explanationBackPreservesReaderContext() {
         setReader()
-        composeRule.onNodeWithTag(AzkarReadingTestTags.Explain).performScrollTo().performClick()
+        composeRule.onNodeWithTag(AzkarReadingTestTags.Explain)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
         composeRule.waitForIdle()
 
         var scrollBefore = 0
         composeRule.runOnIdle {
             scrollBefore = navigation.currentScrollY
+            assertEquals(AzkarReaderSheet.Explanation, readerUi.state.activeSheet)
             assertEquals("muawwidhat", readerUi.state.selectedExplanationId)
         }
         composeRule.onNodeWithTag(AzkarSheetTestTags.Explanation).assertIsDisplayed()
