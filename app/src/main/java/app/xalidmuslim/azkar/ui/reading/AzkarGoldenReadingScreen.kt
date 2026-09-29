@@ -71,6 +71,8 @@ internal object AzkarReadingTestTags {
     const val Note = "azkar-note"
     const val Explain = "azkar-explain"
     const val Counter = "azkar-counter"
+    const val ResetProgress = "azkar-reset-progress"
+    const val CountActionPrefix = "azkar-count-action-"
     const val Pager = "azkar-pager"
     const val Footer = "azkar-footer"
     const val ReadingArea = "azkar-reading-area"
@@ -101,6 +103,8 @@ fun AzkarGoldenReadingScreen(
     onOpenSettings: () -> Unit = {},
     onOpenContents: () -> Unit = {},
     onOpenExplanation: (String) -> Unit = {},
+    onIncrementCount: (String, Int) -> Unit = { _, _ -> },
+    onResetProgress: () -> Unit = {},
     compactReader: Boolean = false,
     showTranslation: Boolean = true,
     showSources: Boolean = true,
@@ -134,7 +138,7 @@ fun AzkarGoldenReadingScreen(
                 AzkarHeader(onOpenSettings)
                 AzkarSourceNote()
                 AzkarPeriodTabs(state.period)
-                AzkarProgressCard(state)
+                AzkarProgressCard(state, onResetProgress)
                 AzkarReaderToolbar(state, narrow, onOpenContents, onOpenSettings)
                 AzkarDhikrCard(
                     state = state,
@@ -147,6 +151,9 @@ fun AzkarGoldenReadingScreen(
                     showSources = showSources,
                     showNotes = showNotes,
                     onOpenExplanation = { onOpenExplanation(state.item.id) },
+                    onIncrementCount = {
+                        onIncrementCount(state.item.id, state.item.count)
+                    },
                 )
                 AzkarPager(
                     state = state,
@@ -299,7 +306,10 @@ private fun AzkarPeriodButton(text: String, active: Boolean, modifier: Modifier)
 }
 
 @Composable
-internal fun AzkarProgressCard(state: AzkarGoldenReadingUiState) {
+internal fun AzkarProgressCard(
+    state: AzkarGoldenReadingUiState,
+    onResetProgress: () -> Unit = {},
+) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.progressCard)
     val roundedPercent = if (state.total == 0) 0
@@ -333,6 +343,9 @@ internal fun AzkarProgressCard(state: AzkarGoldenReadingUiState) {
             )
             BasicText(
                 text = "↻ Сбросить",
+                modifier = Modifier
+                    .clickable(onClick = onResetProgress)
+                    .testTag(AzkarReadingTestTags.ResetProgress),
                 style = AzkarThemeValues.typography.resetTextButton.copy(color = colors.muted),
             )
         }
@@ -445,6 +458,7 @@ internal fun AzkarDhikrCard(
     showSources: Boolean,
     showNotes: Boolean,
     onOpenExplanation: () -> Unit,
+    onIncrementCount: () -> Unit,
 ) {
     val item = state.item
     val colors = AzkarThemeValues.colors
@@ -620,6 +634,7 @@ internal fun AzkarDhikrCard(
                 state = state,
                 completed = completed,
                 narrow = narrow,
+                onIncrementCount = onIncrementCount,
                 modifier = Modifier
                     .padding(top = AzkarSpacing.counterTop)
                     .testTag(AzkarReadingTestTags.Counter),
@@ -657,6 +672,7 @@ private fun AzkarCounterRow(
     state: AzkarGoldenReadingUiState,
     completed: Boolean,
     narrow: Boolean,
+    onIncrementCount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (narrow) {
@@ -665,7 +681,7 @@ private fun AzkarCounterRow(
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.counterGap),
         ) {
             AzkarCounterText(state, completed)
-            AzkarCountAction(state, completed, Modifier.fillMaxWidth())
+            AzkarCountAction(state, completed, onIncrementCount, Modifier.fillMaxWidth())
         }
     } else {
         Row(
@@ -676,7 +692,7 @@ private fun AzkarCounterRow(
             Box(modifier = Modifier.weight(1f)) {
                 AzkarCounterText(state, completed)
             }
-            AzkarCountAction(state, completed)
+            AzkarCountAction(state, completed, onIncrementCount)
         }
     }
 }
@@ -714,6 +730,7 @@ private fun AzkarCounterText(state: AzkarGoldenReadingUiState, completed: Boolea
 private fun AzkarCountAction(
     state: AzkarGoldenReadingUiState,
     completed: Boolean,
+    onIncrementCount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val label = when {
@@ -723,8 +740,8 @@ private fun AzkarCountAction(
     }
     AzkarPrimaryButton(
         text = label,
-        onClick = {},
-        modifier = modifier,
+        onClick = onIncrementCount,
+        modifier = modifier.testTag(AzkarReadingTestTags.CountActionPrefix + state.item.id),
         enabled = !completed,
     )
 }
