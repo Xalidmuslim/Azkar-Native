@@ -128,8 +128,14 @@ fun AzkarReaderScreen(
         currentCount = active.currentCount,
     )
 
-    val previous = { controller.previous() }
-    val next = { controller.next() }
+    val previous: () -> Unit = {
+        controller.previous()
+        Unit
+    }
+    val next: () -> Unit = {
+        controller.next()
+        Unit
+    }
     val gestureModifier = Modifier
         .azkarHorizontalPaging(
             enabled = entries.size > 1,
