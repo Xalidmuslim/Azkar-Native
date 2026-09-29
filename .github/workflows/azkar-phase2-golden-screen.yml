@@ -58,9 +58,17 @@ jobs:
 
           adb logcat -c
 
+          ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+
+          adb install -r app/build/outputs/apk/debug/app-debug.apk
+          adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
           set +e
-          ./gradlew :app:connectedDebugAndroidTest             -Pandroid.testInstrumentationRunnerArguments.class="app.xalidmuslim.azkar.ui.reading.AzkarGoldenReadingScreenshotTest#capture360Light"             --stacktrace --info
-          TEST_EXIT=$?
+          adb shell am instrument -w -r \
+            -e class "app.xalidmuslim.azkar.ui.reading.AzkarGoldenReadingScreenshotTest#capture360Light" \
+            app.xalidmuslim.azkar.test/androidx.test.runner.AndroidJUnitRunner \
+            | tee phase2-diagnostics/instrumentation-output.txt
+          TEST_EXIT=${PIPESTATUS[0]}
           set -e
 
           printf '%s\n' "$TEST_EXIT" | tee phase2-diagnostics/test-exit.txt
@@ -84,7 +92,17 @@ jobs:
             cp -a app/build/outputs/managed_device_android_test_additional_output/. phase2-diagnostics/managed-device-additional-output/ || true
           fi
 
-          adb pull "/sdcard/Android/data/app.xalidmuslim.azkar/files/phase2-evidence/azkar_360x800_light.png"             "phase2-evidence/azkar_360x800_light.png" || true
+          adb pull "/sdcard/Android/data/app.xalidmuslim.azkar/files/phase2-evidence/azkar_360x800_light.png" \
+            "phase2-evidence/azkar_360x800_light.png"
+          test -s "phase2-evidence/azkar_360x800_light.png"
+
+          if ! grep -q "OK (1 test)" phase2-diagnostics/instrumentation-output.txt; then
+            echo "Instrumentation did not report OK (1 test)"
+            TEST_EXIT=1
+          fi
+
+          adb uninstall app.xalidmuslim.azkar.test || true
+          adb uninstall app.xalidmuslim.azkar || true
 
           echo "===== instrumentation list after test ====="
           cat phase2-diagnostics/instrumentation-list.txt || true
