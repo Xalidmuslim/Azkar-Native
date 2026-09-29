@@ -264,7 +264,9 @@ fun AzkarReaderScreen(
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenExplanation = resolvedUiController::openExplanation,
-                        onIncrementCount = resolvedUiController::incrementProgress,
+                        onIncrementCount = { itemId, target ->
+                            resolvedUiController.incrementProgress(itemId, target)
+                        },
                         onResetProgress = {
                             resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
                         },
@@ -285,7 +287,9 @@ fun AzkarReaderScreen(
                         modifier = Modifier.fillMaxSize(),
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
-                        onIncrementCount = resolvedUiController::incrementProgress,
+                        onIncrementCount = { itemId, target ->
+                            resolvedUiController.incrementProgress(itemId, target)
+                        },
                         onResetProgress = {
                             resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
                         },
