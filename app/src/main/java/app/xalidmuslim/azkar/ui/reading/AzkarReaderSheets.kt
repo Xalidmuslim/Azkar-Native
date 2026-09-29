@@ -69,6 +69,8 @@ internal object AzkarSheetTestTags {
     const val Contents = "azkar-contents-sheet"
     const val Explanation = "azkar-explanation-sheet"
     const val ContentsItemPrefix = "azkar-contents-item-"
+    const val ContentsCardsMode = "azkar-contents-mode-cards"
+    const val ContentsListMode = "azkar-contents-mode-list"
     const val SettingTranslation = "azkar-setting-translation"
     const val SettingSources = "azkar-setting-sources"
     const val SettingNotes = "azkar-setting-notes"
@@ -84,8 +86,10 @@ internal fun AzkarReaderSheetHost(
     activeIndex: Int,
     selectedExplanationId: String?,
     settings: AzkarReaderSettings,
+    viewMode: AzkarReaderViewMode,
     onDismiss: () -> Unit,
     onSelectContents: (Int) -> Unit,
+    onViewModeChange: (AzkarReaderViewMode) -> Unit,
     onUpdateSettings: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
 ) {
     AnimatedVisibility(
@@ -116,8 +120,10 @@ internal fun AzkarReaderSheetHost(
             AzkarReaderSheet.Contents -> AzkarContentsSheet(
                 entries = entries,
                 activeIndex = activeIndex,
+                viewMode = viewMode,
                 onDismiss = onDismiss,
                 onSelect = onSelectContents,
+                onViewModeChange = onViewModeChange,
             )
             AzkarReaderSheet.Explanation -> {
                 val item = entries.firstOrNull { it.item.id == selectedExplanationId }?.item
@@ -233,14 +239,16 @@ private fun AzkarBottomSheet(
 private fun AzkarContentsSheet(
     entries: List<AzkarReaderEntry>,
     activeIndex: Int,
+    viewMode: AzkarReaderViewMode,
     onDismiss: () -> Unit,
     onSelect: (Int) -> Unit,
+    onViewModeChange: (AzkarReaderViewMode) -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
     AzkarBottomSheet(
         title = "Содержание",
         eyebrow = "Навигация",
-        subtitle = "По одному",
+        subtitle = if (viewMode == AzkarReaderViewMode.Cards) "По одному" else "Список",
         maxHeightFraction = AzkarDimensions.sheetMaxHeightFraction,
         specificTestTag = AzkarSheetTestTags.Contents,
         onDismiss = onDismiss,
@@ -257,6 +265,28 @@ private fun AzkarContentsSheet(
                 ),
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.contentsListGap),
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.styleGridGap),
+            ) {
+                AzkarChoiceTile(
+                    text = "По одному",
+                    active = viewMode == AzkarReaderViewMode.Cards,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(AzkarSheetTestTags.ContentsCardsMode),
+                    onClick = { onViewModeChange(AzkarReaderViewMode.Cards) },
+                )
+                AzkarChoiceTile(
+                    text = "Список",
+                    active = viewMode == AzkarReaderViewMode.List,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(AzkarSheetTestTags.ContentsListMode),
+                    onClick = { onViewModeChange(AzkarReaderViewMode.List) },
+                )
+            }
+
             entries.forEachIndexed { index, entry ->
                 val active = index == activeIndex
                 val completed = entry.currentCount >= entry.item.count
