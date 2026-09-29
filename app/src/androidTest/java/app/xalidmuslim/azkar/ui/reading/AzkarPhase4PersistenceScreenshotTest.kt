@@ -6,11 +6,13 @@ import android.os.SystemClock
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -161,6 +163,7 @@ class AzkarPhase4PersistenceScreenshotTest {
             fileName = "azkar_phase4_393_light_list_completed.png",
             focusText = "Выполнено",
             focusItemId = target.id,
+            revealNeighborItemId = unrelated.id,
         )
     }
 
@@ -262,6 +265,7 @@ class AzkarPhase4PersistenceScreenshotTest {
         fileName: String,
         focusText: String? = null,
         focusItemId: String? = null,
+        revealNeighborItemId: String? = null,
         openSettings: Boolean = false,
     ) {
         val renderedEntries = entries.map { entry ->
@@ -316,6 +320,22 @@ class AzkarPhase4PersistenceScreenshotTest {
         focusText?.let { text ->
             composeRule.onNodeWithText(text)
                 .performScrollTo()
+                .assertIsDisplayed()
+        }
+
+        revealNeighborItemId?.let { neighborItemId ->
+            composeRule.onNodeWithTag(AzkarReadingTestTags.List)
+                .performTouchInput {
+                    swipe(
+                        start = Offset(centerX, bottom * 0.82f),
+                        end = Offset(centerX, bottom * 0.64f),
+                        durationMillis = 200L,
+                    )
+                }
+            composeRule.waitForIdle()
+            composeRule.onNodeWithText("Выполнено").assertIsDisplayed()
+            composeRule.onNodeWithText("✓ Готово").assertIsDisplayed()
+            composeRule.onNodeWithTag(AzkarReadingTestTags.ListCardPrefix + neighborItemId)
                 .assertIsDisplayed()
         }
 
