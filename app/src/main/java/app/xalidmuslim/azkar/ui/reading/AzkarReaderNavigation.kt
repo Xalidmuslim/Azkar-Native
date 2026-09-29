@@ -54,6 +54,17 @@ class AzkarReaderNavigationController(
         return true
     }
 
+    fun selectAnchor(index: Int): Boolean {
+        if (index !in 0 until itemCount || index == state.activeIndex) return false
+        state = state.copy(
+            activeIndex = index,
+            direction = AzkarNavigationDirection.None,
+            generation = state.generation + 1L,
+        )
+        currentScrollY = 0
+        return true
+    }
+
     fun reopenCurrentAtTop() {
         state = state.copy(
             direction = AzkarNavigationDirection.None,
