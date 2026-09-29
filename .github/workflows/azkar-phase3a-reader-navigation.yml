@@ -1,0 +1,206 @@
+name: Azkar Phase 3A Reader Navigation
+
+on:
+  push:
+    branches:
+      - azkar-native-phase3-reader-navigation-2026-09-29
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Compile Compose/Kotlin
+        run: ./gradlew :app:compileDebugKotlin --stacktrace
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Summarize unit tests
+        shell: bash
+        run: |
+          mkdir -p phase3a-diagnostics
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          total = failures = errors = skipped = 0
+          for path in glob.glob("app/build/test-results/testDebugUnitTest/TEST-*.xml"):
+              root = ET.parse(path).getroot()
+              total += int(root.attrib.get("tests", 0))
+              failures += int(root.attrib.get("failures", 0))
+              errors += int(root.attrib.get("errors", 0))
+              skipped += int(root.attrib.get("skipped", 0))
+          line = f"tests={total} failures={failures} errors={errors} skipped={skipped}"
+          print(line)
+          open("phase3a-diagnostics/unit-summary.txt","w").write(line + "\n")
+          PY
+
+      - name: Lint
+        run: ./gradlew :app:lintDebug --stacktrace
+
+      - name: Prepare Phase 3A instrumentation script
+        shell: bash
+        run: |
+          mkdir -p phase3a-diagnostics phase3a-evidence
+          cat > phase3a-reader-navigation.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -u
+          set -o pipefail
+
+          APP_PACKAGE="app.xalidmuslim.azkar"
+          TEST_PACKAGE="app.xalidmuslim.azkar.test"
+          TEST_COMPONENT="${TEST_PACKAGE}/androidx.test.runner.AndroidJUnitRunner"
+          NAV_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarReaderNavigationInstrumentedTest"
+          GOLDEN_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarGoldenReadingScreenshotTest"
+          REMOTE_DIR="/sdcard/Android/data/${APP_PACKAGE}/files/phase2-evidence"
+
+          mkdir -p phase3a-diagnostics phase3a-evidence
+
+          adb wait-for-device
+          adb shell getprop sys.boot_completed | tee phase3a-diagnostics/boot-completed.txt
+          adb devices -l | tee phase3a-diagnostics/adb-devices.txt
+
+          ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace || exit 1
+
+          adb install -r app/build/outputs/apk/debug/app-debug.apk || exit 1
+          adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk || exit 1
+
+          adb shell wm size 393x873
+          adb shell wm density 160
+          adb shell settings put system font_scale 1.0
+          adb shell wm size | tee phase3a-diagnostics/nav-wm-size.txt
+          adb shell wm density | tee phase3a-diagnostics/nav-wm-density.txt
+          adb shell settings get system font_scale | tee phase3a-diagnostics/nav-font-scale.txt
+
+          grep -q "Override size: 393x873" phase3a-diagnostics/nav-wm-size.txt || exit 1
+          grep -q "Override density: 160" phase3a-diagnostics/nav-wm-density.txt || exit 1
+          grep -qx "1.0" phase3a-diagnostics/nav-font-scale.txt || exit 1
+
+          timeout 15s adb shell am wait-for-broadcast-idle || true
+          adb logcat -c || true
+
+          echo "===== Phase 3A navigation instrumentation ====="
+          set +e
+          adb shell am instrument -w -r             -e class "${NAV_CLASS}"             "${TEST_COMPONENT}"             | tee phase3a-diagnostics/navigation-instrumentation.txt
+          NAV_EXIT=${PIPESTATUS[0]}
+          set -e
+          printf '%s
+' "${NAV_EXIT}" | tee phase3a-diagnostics/navigation-exit.txt
+          adb logcat -d -v threadtime > phase3a-diagnostics/navigation-logcat.txt || true
+
+          if [ "${NAV_EXIT}" -ne 0 ]; then
+            echo "Navigation instrumentation exit status ${NAV_EXIT}"
+            exit "${NAV_EXIT}"
+          fi
+          grep -q "OK (10 tests)" phase3a-diagnostics/navigation-instrumentation.txt || {
+            echo "Navigation instrumentation did not report OK (10 tests)"
+            exit 1
+          }
+
+          run_golden() {
+            local method="$1"
+            local screen="$2"
+            local filename="$3"
+            local width="$4"
+            local height="$5"
+            local output="phase3a-diagnostics/golden-${method}.txt"
+            local wm_file="phase3a-diagnostics/golden-wm-${method}.txt"
+            local file_info="phase3a-diagnostics/golden-file-${method}.txt"
+
+            adb shell wm size "${screen}" || return 1
+            adb shell wm density 160 || return 1
+            adb shell settings put system font_scale 1.0 || return 1
+
+            adb shell wm size | tee "${wm_file}" || return 1
+            grep -q "Override size: ${screen}" "${wm_file}" || return 1
+
+            timeout 15s adb shell am wait-for-broadcast-idle || true
+
+            set +e
+            adb shell am instrument -w -r               -e class "${GOLDEN_CLASS}#${method}"               "${TEST_COMPONENT}"               | tee "${output}"
+            local test_exit=${PIPESTATUS[0]}
+            set -e
+
+            printf '%s
+' "${test_exit}" > "phase3a-diagnostics/golden-exit-${method}.txt"
+            if [ "${test_exit}" -ne 0 ]; then
+              return 1
+            fi
+            grep -q "OK (1 test)" "${output}" || return 1
+
+            adb pull "${REMOTE_DIR}/${filename}" "phase3a-evidence/${filename}" || return 1
+            test -s "phase3a-evidence/${filename}" || return 1
+            stat -c '%n %s bytes' "phase3a-evidence/${filename}" | tee "${file_info}"
+            file "phase3a-evidence/${filename}" | tee -a "${file_info}" || return 1
+            grep -q "PNG image data, ${width} x ${height}" "${file_info}" || return 1
+
+            echo "${method}: PASS"
+          }
+
+          run_golden capture360Light 360x800 azkar_360x800_light.png 360 800 || exit 1
+          run_golden capture393Light 393x873 azkar_393x873_light.png 393 873 || exit 1
+          run_golden capture412Light 412x915 azkar_412x915_light.png 412 915 || exit 1
+          run_golden capture393Dark 393x873 azkar_393x873_dark.png 393 873 || exit 1
+          run_golden capture393LongExistingDhikr 393x873 azkar_393x873_long_baqarah.png 393 873 || exit 1
+
+          adb logcat -d -v threadtime > phase3a-diagnostics/final-logcat.txt || true
+
+          echo "===== ANR/crash scan ====="
+          grep -RInE -C 5             'ANR in app\.xalidmuslim\.azkar|FATAL EXCEPTION|Process crashed|INSTRUMENTATION_FAILED|ClassNotFoundException|NoClassDefFoundError|Unable to instantiate|Unable to start'             phase3a-diagnostics/*.txt 2>/dev/null || true
+
+          echo "===== Phase 3A evidence ====="
+          find phase3a-evidence -maxdepth 1 -type f -name '*.png'             -print -exec stat -c '%s bytes' {} ; -exec file {} ; || true
+
+          adb uninstall "${TEST_PACKAGE}" || true
+          adb uninstall "${APP_PACKAGE}" || true
+          adb shell wm size reset || true
+          adb shell wm density reset || true
+          adb shell settings put system font_scale 1.0 || true
+          EOF
+          chmod +x phase3a-reader-navigation.sh
+
+      - name: Enable KVM
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "/dev/kvm is not available"
+            exit 1
+          fi
+
+      - name: Run Phase 3A navigation and golden regression
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash phase3a-reader-navigation.sh
+
+      - name: Upload Phase 3A golden regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: azkar-phase3a-golden-regression
+          path: |
+            phase3a-evidence/**
+            phase3a-diagnostics/**
+            app/build/test-results/testDebugUnitTest/**
+          if-no-files-found: error
+          retention-days: 30
