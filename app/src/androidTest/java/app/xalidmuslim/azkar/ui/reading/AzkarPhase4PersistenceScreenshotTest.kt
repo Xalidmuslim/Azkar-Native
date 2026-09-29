@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.datastore.core.DataStore
@@ -53,6 +55,7 @@ class AzkarPhase4PersistenceScreenshotTest {
     private lateinit var repository: DataStoreAzkarPreferencesRepository
     private lateinit var dataStoreFile: File
     private lateinit var readerUi: AzkarReaderUiController
+    private lateinit var navigation: AzkarReaderNavigationController
 
     private val date = LocalDate.of(2026, 9, 29)
     private val dateProvider = FixedDateProvider(date)
@@ -162,6 +165,7 @@ class AzkarPhase4PersistenceScreenshotTest {
         composeRule.setContent {
             val scope = rememberCoroutineScope()
             val nav = remember { AzkarReaderNavigationController(entries.size) }
+            navigation = nav
             val ui = remember {
                 AzkarReaderUiController(
                     repository = repository,
@@ -185,10 +189,39 @@ class AzkarPhase4PersistenceScreenshotTest {
         }
         composeRule.waitForIdle()
 
+        val listNode = runCatching {
+            composeRule.onNodeWithTag(AzkarReadingTestTags.List).fetchSemanticsNode()
+        }.getOrNull()
+        val cardNode = runCatching {
+            composeRule.onNodeWithTag(AzkarReadingTestTags.Card).fetchSemanticsNode()
+        }.getOrNull()
+        val rootNode = composeRule.onRoot(useUnmergedTree = true).fetchSemanticsNode()
+        val activeIndex = navigation.state.activeIndex
+        val currentItemId = entries.getOrNull(activeIndex)?.item?.id
+
+        println(
+            "PHASE4_DIAG " +
+                "hydrated=${readerUi.state.isHydrated} " +
+                "viewMode=${readerUi.state.viewMode} " +
+                "activeIndex=$activeIndex " +
+                "currentItemId=$currentItemId " +
+                "activeSheet=${readerUi.state.activeSheet} " +
+                "progress=${readerUi.state.progressById.filterKeys { id -> entries.any { it.item.id == id } }} " +
+                "listExists=${listNode != null} " +
+                "cardExists=${cardNode != null} " +
+                "cardBounds=${cardNode?.boundsInRoot} " +
+                "scrollY=${navigation.currentScrollY} " +
+                "viewport=${rootNode.boundsInRoot}"
+        )
+
         if (expectList) {
-            composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
+            composeRule.onNodeWithTag(AzkarReadingTestTags.List)
+                .assertExists()
+                .assertIsDisplayed()
         } else {
-            composeRule.onNodeWithTag(AzkarReadingTestTags.Card).assertIsDisplayed()
+            composeRule.onNodeWithTag(AzkarReadingTestTags.Card)
+                .assertExists()
+                .assertIsDisplayed()
         }
 
         if (openSettings) {
