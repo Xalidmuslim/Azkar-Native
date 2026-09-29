@@ -20,6 +20,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
+import app.xalidmuslim.azkar.persistence.AzkarDateProvider
+import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
+import app.xalidmuslim.azkar.persistence.SystemAzkarDateProvider
 import app.xalidmuslim.azkar.ui.designsystem.AzkarTheme
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
@@ -54,6 +57,37 @@ fun AzkarReaderScreen(
 fun AzkarReaderScreen(
     entries: List<AzkarReaderEntry>,
     period: AzkarPeriod,
+    preferencesRepository: AzkarPreferencesRepository,
+    dateProvider: AzkarDateProvider = SystemAzkarDateProvider,
+    modifier: Modifier = Modifier,
+    initialIndex: Int = 0,
+) {
+    val scope = rememberCoroutineScope()
+    val visibleItemIds = remember(entries) { entries.map { it.item.id }.toSet() }
+    val navigationController = remember(entries.size, initialIndex) {
+        AzkarReaderNavigationController(entries.size, initialIndex)
+    }
+    val uiController = remember(preferencesRepository, dateProvider, visibleItemIds) {
+        AzkarReaderUiController(
+            repository = preferencesRepository,
+            dateProvider = dateProvider,
+            persistenceScope = scope,
+            visibleItemIds = visibleItemIds,
+        )
+    }
+    AzkarReaderScreen(
+        entries = entries,
+        period = period,
+        controller = navigationController,
+        uiController = uiController,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun AzkarReaderScreen(
+    entries: List<AzkarReaderEntry>,
+    period: AzkarPeriod,
     controller: AzkarReaderNavigationController,
     modifier: Modifier = Modifier,
     uiController: AzkarReaderUiController? = null,
@@ -63,9 +97,20 @@ fun AzkarReaderScreen(
     val resolvedUiController = uiController ?: remember { AzkarReaderUiController() }
     val navigation = controller.state
     val readerUi = resolvedUiController.state
+    if (!readerUi.isHydrated) {
+        Box(modifier = modifier.fillMaxSize())
+        return
+    }
     val settings = readerUi.settings
-    val activeIndex = navigation.activeIndex.coerceIn(entries.indices)
-    val active = entries[activeIndex]
+    val resolvedEntries = entries.map { entry ->
+        entry.copy(
+            currentCount = resolvedUiController
+                .currentCount(entry.item.id, entry.currentCount)
+                .coerceIn(0, entry.item.count),
+        )
+    }
+    val activeIndex = navigation.activeIndex.coerceIn(resolvedEntries.indices)
+    val active = resolvedEntries[activeIndex]
     val shellScrollState = rememberScrollState()
     val readingScrollState = remember(navigation.generation, readerUi.viewMode) { ScrollState(0) }
     val listState = rememberLazyListState()
@@ -158,7 +203,7 @@ fun AzkarReaderScreen(
         }
     }
 
-    val completedItems = entries.count { it.currentCount >= it.item.count }
+    val completedItems = countCompletedItems(resolvedEntries)
     val uiState = AzkarGoldenReadingUiState(
         item = active.item,
         period = period,
@@ -188,7 +233,7 @@ fun AzkarReaderScreen(
     }
     val gestureModifier = Modifier
         .azkarHorizontalPaging(
-            enabled = readerUi.allowsHorizontalPaging(entries.size),
+            enabled = readerUi.allowsHorizontalPaging(resolvedEntries.size),
             onPrevious = previous,
             onNext = next,
         )
@@ -219,6 +264,10 @@ fun AzkarReaderScreen(
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenExplanation = resolvedUiController::openExplanation,
+                        onIncrementCount = resolvedUiController::incrementProgress,
+                        onResetProgress = {
+                            resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
+                        },
                         compactReader = settings.readerStyle == AzkarReaderStyle.Compact,
                         showTranslation = settings.showTranslation,
                         showSources = settings.showSources,
@@ -228,7 +277,7 @@ fun AzkarReaderScreen(
 
                 AzkarReaderViewMode.List -> {
                     AzkarListReadingScreen(
-                        entries = entries,
+                        entries = resolvedEntries,
                         period = period,
                         activeIndex = activeIndex,
                         listState = listState,
@@ -236,6 +285,10 @@ fun AzkarReaderScreen(
                         modifier = Modifier.fillMaxSize(),
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
+                        onIncrementCount = resolvedUiController::incrementProgress,
+                        onResetProgress = {
+                            resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
+                        },
                         onOpenExplanation = { index, itemId ->
                             controller.selectAnchor(index)
                             resolvedUiController.openExplanation(itemId)
@@ -246,7 +299,7 @@ fun AzkarReaderScreen(
 
             AzkarReaderSheetHost(
                 activeSheet = readerUi.activeSheet,
-                entries = entries,
+                entries = resolvedEntries,
                 activeIndex = activeIndex,
                 selectedExplanationId = readerUi.selectedExplanationId,
                 settings = settings,
