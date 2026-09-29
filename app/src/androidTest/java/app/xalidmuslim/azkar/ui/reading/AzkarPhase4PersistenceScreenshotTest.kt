@@ -183,8 +183,24 @@ class AzkarPhase4PersistenceScreenshotTest {
             )
         }
 
+        val expectedMode = if (expectList) {
+            AzkarReaderViewMode.List
+        } else {
+            AzkarReaderViewMode.Cards
+        }
+        val expectedTag = if (expectList) {
+            AzkarReadingTestTags.List
+        } else {
+            AzkarReadingTestTags.Card
+        }
+
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            ::readerUi.isInitialized && readerUi.state.isHydrated
+            ::readerUi.isInitialized &&
+                readerUi.state.isHydrated &&
+                readerUi.state.viewMode == expectedMode &&
+                runCatching {
+                    composeRule.onNodeWithTag(expectedTag).fetchSemanticsNode()
+                }.isSuccess
         }
         composeRule.waitForIdle()
 
