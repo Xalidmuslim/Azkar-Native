@@ -20,6 +20,11 @@ enum class AzkarReaderStyle {
     Compact,
 }
 
+enum class AzkarReaderViewMode {
+    Cards,
+    List,
+}
+
 data class AzkarReaderSettings(
     val russianFontFamily: RussianFontFamily = RussianFontFamily.LITERATA,
     val arabicFontFamily: ArabicFontFamily = ArabicFontFamily.NOTO_NASKH_ARABIC,
@@ -37,12 +42,19 @@ data class AzkarReaderUiState(
     val activeSheet: AzkarReaderSheet = AzkarReaderSheet.None,
     val selectedExplanationId: String? = null,
     val settings: AzkarReaderSettings = AzkarReaderSettings(),
+    val viewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
 )
 
 class AzkarReaderUiController(
     initialSettings: AzkarReaderSettings = AzkarReaderSettings(),
+    initialViewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
 ) {
-    var state by mutableStateOf(AzkarReaderUiState(settings = initialSettings))
+    var state by mutableStateOf(
+        AzkarReaderUiState(
+            settings = initialSettings,
+            viewMode = initialViewMode,
+        ),
+    )
         private set
 
     fun openSettings() {
@@ -77,6 +89,12 @@ class AzkarReaderUiController(
 
     fun updateSettings(transform: (AzkarReaderSettings) -> AzkarReaderSettings) {
         state = state.copy(settings = transform(state.settings))
+    }
+
+    fun setViewMode(viewMode: AzkarReaderViewMode): Boolean {
+        if (state.viewMode == viewMode) return false
+        state = state.copy(viewMode = viewMode)
+        return true
     }
 
     fun handleBack(navigation: AzkarReaderNavigationController): Boolean {
