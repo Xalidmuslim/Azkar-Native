@@ -2,6 +2,7 @@ package app.xalidmuslim.azkar.ui.reading
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,6 +22,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +38,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.xalidmuslim.azkar.ui.designsystem.AzkarBorders
 import app.xalidmuslim.azkar.ui.designsystem.AzkarCardSurface
@@ -68,6 +73,9 @@ internal object AzkarReadingTestTags {
     const val Counter = "azkar-counter"
     const val Pager = "azkar-pager"
     const val Footer = "azkar-footer"
+    const val ReadingArea = "azkar-reading-area"
+    const val Previous = "azkar-previous"
+    const val Next = "azkar-next"
 }
 
 private const val SourceNoteText =
@@ -80,30 +88,55 @@ private const val FooterText =
 fun AzkarGoldenReadingScreen(
     state: AzkarGoldenReadingUiState = AzkarGoldenReadingFixtures.GoldenMorning,
     modifier: Modifier = Modifier,
+    onPrevious: () -> Unit = {},
+    onNext: () -> Unit = {},
+    shellScrollState: ScrollState? = null,
+    readingScrollState: ScrollState? = null,
+    readingAreaModifier: Modifier = Modifier,
 ) {
     AzkarSurface(modifier = modifier.fillMaxWidth().testTag(AzkarReadingTestTags.Screen)) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val narrow = maxWidth <= AzkarDimensions.responsiveBreakpoint
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .widthIn(max = AzkarDimensions.shellMaxWidth)
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
-                        ),
-                    )
-                    .padding(horizontal = AzkarSpacing.shellHorizontal)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                    .padding(bottom = AzkarSpacing.shellBottomBase),
-            ) {
+            val readingMaxHeight = if (readingScrollState != null) {
+                (maxHeight - AzkarDimensions.pagedViewportReservedHeight).coerceAtLeast(1.dp)
+            } else {
+                null
+            }
+            val shellModifier = Modifier
+                .align(Alignment.TopCenter)
+                .widthIn(max = AzkarDimensions.shellMaxWidth)
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
+                    ),
+                )
+                .padding(horizontal = AzkarSpacing.shellHorizontal)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                .padding(bottom = AzkarSpacing.shellBottomBase)
+                .then(
+                    if (shellScrollState != null) Modifier.verticalScroll(shellScrollState)
+                    else Modifier,
+                )
+
+            Column(modifier = shellModifier) {
                 AzkarHeader()
                 AzkarSourceNote()
                 AzkarPeriodTabs(state.period)
                 AzkarProgressCard(state)
                 AzkarReaderToolbar(state, narrow)
-                AzkarDhikrCard(state, narrow)
-                AzkarPager(state, narrow)
+                AzkarDhikrCard(
+                    state = state,
+                    narrow = narrow,
+                    scrollState = readingScrollState,
+                    maxHeight = readingMaxHeight,
+                    interactionModifier = readingAreaModifier,
+                )
+                AzkarPager(
+                    state = state,
+                    narrow = narrow,
+                    onPrevious = onPrevious,
+                    onNext = onNext,
+                )
                 AzkarFooter()
             }
         }
@@ -362,15 +395,30 @@ private fun AzkarToolbarButton(text: String) {
 }
 
 @Composable
-private fun AzkarDhikrCard(state: AzkarGoldenReadingUiState, narrow: Boolean) {
+private fun AzkarDhikrCard(
+    state: AzkarGoldenReadingUiState,
+    narrow: Boolean,
+    scrollState: ScrollState?,
+    maxHeight: Dp?,
+    interactionModifier: Modifier,
+) {
     val item = state.item
     val colors = AzkarThemeValues.colors
     val completed = state.currentCount >= item.count
 
-    AzkarCardSurface(
-        modifier = Modifier.fillMaxWidth().testTag(AzkarReadingTestTags.Card),
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+    val cardModifier = Modifier
+        .fillMaxWidth()
+        .then(if (maxHeight != null) Modifier.heightIn(max = maxHeight) else Modifier)
+        .then(interactionModifier)
+        .testTag(AzkarReadingTestTags.Card)
+
+    AzkarCardSurface(modifier = cardModifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AzkarReadingTestTags.ReadingArea)
+                .then(if (scrollState != null) Modifier.verticalScroll(scrollState) else Modifier),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.cardHeaderGap),
@@ -629,7 +677,12 @@ private fun AzkarCountAction(
 }
 
 @Composable
-private fun AzkarPager(state: AzkarGoldenReadingUiState, narrow: Boolean) {
+private fun AzkarPager(
+    state: AzkarGoldenReadingUiState,
+    narrow: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.pager)
     Row(
@@ -649,6 +702,8 @@ private fun AzkarPager(state: AzkarGoldenReadingUiState, narrow: Boolean) {
             primary = false,
             enabled = state.position > 1,
             modifier = Modifier.weight(1f),
+            testTag = AzkarReadingTestTags.Previous,
+            onClick = onPrevious,
         )
 
         Column(
@@ -686,6 +741,8 @@ private fun AzkarPager(state: AzkarGoldenReadingUiState, narrow: Boolean) {
             primary = true,
             enabled = state.position < state.total,
             modifier = Modifier.weight(1f),
+            testTag = AzkarReadingTestTags.Next,
+            onClick = onNext,
         )
     }
 }
@@ -696,12 +753,16 @@ private fun AzkarPagerButton(
     primary: Boolean,
     enabled: Boolean,
     modifier: Modifier,
+    testTag: String,
+    onClick: () -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.pagerButton)
     Box(
         modifier = modifier
             .alpha(if (enabled) 1f else AzkarDimensions.disabledControlAlpha)
+            .clickable(enabled = enabled, onClick = onClick)
+            .testTag(testTag)
             .defaultMinSize(minHeight = AzkarDimensions.pagerButtonMinHeight)
             .clip(shape)
             .background(if (primary) colors.primary else colors.card)
