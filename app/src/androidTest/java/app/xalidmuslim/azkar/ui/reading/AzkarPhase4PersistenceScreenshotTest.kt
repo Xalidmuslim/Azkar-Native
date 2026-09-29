@@ -5,11 +5,12 @@ import android.graphics.Color
 import android.os.SystemClock
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -17,6 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import app.xalidmuslim.azkar.persistence.AzkarDateProvider
+import app.xalidmuslim.azkar.persistence.AzkarPreferencesSnapshot
 import app.xalidmuslim.azkar.persistence.DataStoreAzkarPreferencesRepository
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
@@ -29,6 +31,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -86,93 +89,199 @@ class AzkarPhase4PersistenceScreenshotTest {
 
     @Test
     fun capture393LightPartialProgress() {
-        runBlocking {
-            repository.saveSettings(AzkarReaderSettings(themeMode = AzkarThemeMode.Light))
-            repository.incrementProgress(date, "muawwidhat", 3)
-        }
-        renderAndCapture(
+        val target = AzkarGoldenReadingFixtures.Muawwidhat
+        val unrelated = AzkarGoldenReadingFixtures.BaqarahLastTwo
+        val expectedSettings = AzkarReaderSettings(themeMode = AzkarThemeMode.Light)
+
+        val snapshot = seedAndReadSnapshot(
+            settings = expectedSettings,
+            viewMode = AzkarReaderViewMode.Cards,
+            increments = mapOf(target.id to 1),
+        )
+        assertSnapshot(
+            snapshot = snapshot,
+            expectedSettings = expectedSettings,
+            expectedViewMode = AzkarReaderViewMode.Cards,
+            expectedProgress = mapOf(target.id to 1, unrelated.id to 0),
+        )
+        assertEquals(3, target.count)
+
+        renderSnapshotAndCapture(
+            snapshot = snapshot,
             fileName = "azkar_phase4_393_light_partial_progress.png",
+            focusText = "1 / 3",
         )
     }
 
     @Test
     fun capture393LightCompletedDhikr() {
-        runBlocking {
-            repository.saveSettings(AzkarReaderSettings(themeMode = AzkarThemeMode.Light))
-            repeat(3) { repository.incrementProgress(date, "muawwidhat", 3) }
-        }
-        renderAndCapture(
+        val target = AzkarGoldenReadingFixtures.Muawwidhat
+        val unrelated = AzkarGoldenReadingFixtures.BaqarahLastTwo
+        val expectedSettings = AzkarReaderSettings(themeMode = AzkarThemeMode.Light)
+
+        val snapshot = seedAndReadSnapshot(
+            settings = expectedSettings,
+            viewMode = AzkarReaderViewMode.Cards,
+            increments = mapOf(target.id to target.count),
+        )
+        assertSnapshot(
+            snapshot = snapshot,
+            expectedSettings = expectedSettings,
+            expectedViewMode = AzkarReaderViewMode.Cards,
+            expectedProgress = mapOf(target.id to 3, unrelated.id to 0),
+        )
+
+        renderSnapshotAndCapture(
+            snapshot = snapshot,
             fileName = "azkar_phase4_393_light_completed.png",
+            focusText = "✓ Готово",
         )
     }
 
     @Test
     fun capture393LightListCompletedItem() {
-        runBlocking {
-            repository.saveSettings(AzkarReaderSettings(themeMode = AzkarThemeMode.Light))
-            repository.saveViewMode(AzkarReaderViewMode.List)
-            repeat(3) { repository.incrementProgress(date, "muawwidhat", 3) }
-        }
-        renderAndCapture(
+        val target = AzkarGoldenReadingFixtures.Muawwidhat
+        val unrelated = AzkarGoldenReadingFixtures.BaqarahLastTwo
+        val expectedSettings = AzkarReaderSettings(themeMode = AzkarThemeMode.Light)
+
+        val snapshot = seedAndReadSnapshot(
+            settings = expectedSettings,
+            viewMode = AzkarReaderViewMode.List,
+            increments = mapOf(target.id to target.count),
+        )
+        assertSnapshot(
+            snapshot = snapshot,
+            expectedSettings = expectedSettings,
+            expectedViewMode = AzkarReaderViewMode.List,
+            expectedProgress = mapOf(target.id to 3, unrelated.id to 0),
+        )
+
+        renderSnapshotAndCapture(
+            snapshot = snapshot,
             fileName = "azkar_phase4_393_light_list_completed.png",
-            expectList = true,
+            focusText = "Выполнено",
+            focusItemId = target.id,
         )
     }
 
     @Test
     fun capture393DarkCompletedItem() {
-        runBlocking {
-            repository.saveSettings(AzkarReaderSettings(themeMode = AzkarThemeMode.Dark))
-            repeat(3) { repository.incrementProgress(date, "muawwidhat", 3) }
-        }
-        renderAndCapture(
+        val target = AzkarGoldenReadingFixtures.Muawwidhat
+        val unrelated = AzkarGoldenReadingFixtures.BaqarahLastTwo
+        val expectedSettings = AzkarReaderSettings(themeMode = AzkarThemeMode.Dark)
+
+        val snapshot = seedAndReadSnapshot(
+            settings = expectedSettings,
+            viewMode = AzkarReaderViewMode.Cards,
+            increments = mapOf(target.id to target.count),
+        )
+        assertSnapshot(
+            snapshot = snapshot,
+            expectedSettings = expectedSettings,
+            expectedViewMode = AzkarReaderViewMode.Cards,
+            expectedProgress = mapOf(target.id to 3, unrelated.id to 0),
+        )
+
+        renderSnapshotAndCapture(
+            snapshot = snapshot,
             fileName = "azkar_phase4_393_dark_completed.png",
+            focusText = "✓ Готово",
         )
     }
 
     @Test
     fun capture393LightSettingsRestoredState() {
-        runBlocking {
-            repository.saveSettings(
-                AzkarReaderSettings(
-                    russianFontFamily = RussianFontFamily.MANROPE,
-                    arabicFontFamily = ArabicFontFamily.AMIRI,
-                    arabicSizeSp = 37f,
-                    russianSizeSp = 20f,
-                    lineHeight = 1.40f,
-                    readerStyle = AzkarReaderStyle.Compact,
-                    showTranslation = false,
-                    showSources = true,
-                    showNotes = false,
-                    themeMode = AzkarThemeMode.Light,
-                ),
-            )
-        }
-        renderAndCapture(
+        val expectedSettings = AzkarReaderSettings(
+            russianFontFamily = RussianFontFamily.MANROPE,
+            arabicFontFamily = ArabicFontFamily.AMIRI,
+            arabicSizeSp = 37f,
+            russianSizeSp = 20f,
+            lineHeight = 1.40f,
+            readerStyle = AzkarReaderStyle.Compact,
+            showTranslation = false,
+            showSources = true,
+            showNotes = false,
+            themeMode = AzkarThemeMode.Light,
+        )
+
+        val snapshot = seedAndReadSnapshot(
+            settings = expectedSettings,
+            viewMode = AzkarReaderViewMode.Cards,
+            increments = emptyMap(),
+        )
+        assertSnapshot(
+            snapshot = snapshot,
+            expectedSettings = expectedSettings,
+            expectedViewMode = AzkarReaderViewMode.Cards,
+            expectedProgress = mapOf(
+                AzkarGoldenReadingFixtures.Muawwidhat.id to 0,
+                AzkarGoldenReadingFixtures.BaqarahLastTwo.id to 0,
+            ),
+        )
+
+        renderSnapshotAndCapture(
+            snapshot = snapshot,
             fileName = "azkar_phase4_393_light_settings_restored.png",
             openSettings = true,
         )
     }
 
-    private fun renderAndCapture(
+    private fun seedAndReadSnapshot(
+        settings: AzkarReaderSettings,
+        viewMode: AzkarReaderViewMode,
+        increments: Map<String, Int>,
+    ): AzkarPreferencesSnapshot = runBlocking {
+        repository.saveSettings(settings)
+        repository.saveViewMode(viewMode)
+        increments.forEach { (itemId, incrementCount) ->
+            val target = entries.first { it.item.id == itemId }.item.count
+            repeat(incrementCount) {
+                repository.incrementProgress(date, itemId, target)
+            }
+        }
+        repository.observeSnapshot(
+            date = date,
+            visibleItemIds = entries.map { it.item.id }.toSet(),
+        ).first()
+    }
+
+    private fun assertSnapshot(
+        snapshot: AzkarPreferencesSnapshot,
+        expectedSettings: AzkarReaderSettings,
+        expectedViewMode: AzkarReaderViewMode,
+        expectedProgress: Map<String, Int>,
+    ) {
+        assertEquals(date, dateProvider.currentDate())
+        assertEquals(expectedViewMode, snapshot.viewMode)
+        assertEquals(expectedSettings, snapshot.settings)
+        assertEquals(expectedProgress, snapshot.progressById)
+    }
+
+    private fun renderSnapshotAndCapture(
+        snapshot: AzkarPreferencesSnapshot,
         fileName: String,
-        expectList: Boolean = false,
+        focusText: String? = null,
+        focusItemId: String? = null,
         openSettings: Boolean = false,
     ) {
+        val renderedEntries = entries.map { entry ->
+            entry.copy(
+                currentCount = (snapshot.progressById[entry.item.id] ?: 0)
+                    .coerceIn(0, entry.item.count),
+            )
+        }
+
         composeRule.setContent {
-            val scope = rememberCoroutineScope()
-            val nav = remember { AzkarReaderNavigationController(entries.size) }
-            val ui = remember {
+            val nav = remember { AzkarReaderNavigationController(renderedEntries.size) }
+            val ui = remember(snapshot.settings, snapshot.viewMode) {
                 AzkarReaderUiController(
-                    repository = repository,
-                    dateProvider = dateProvider,
-                    persistenceScope = scope,
-                    visibleItemIds = entries.map { it.item.id }.toSet(),
+                    initialSettings = snapshot.settings,
+                    initialViewMode = snapshot.viewMode,
                 )
             }
             readerUi = ui
             AzkarReaderScreen(
-                entries = entries,
+                entries = renderedEntries,
                 period = AzkarPeriod.Morning,
                 controller = nav,
                 uiController = ui,
@@ -180,15 +289,34 @@ class AzkarPhase4PersistenceScreenshotTest {
             )
         }
 
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            ::readerUi.isInitialized && readerUi.state.isHydrated
-        }
         composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals(true, readerUi.state.isHydrated)
+            assertEquals(snapshot.settings, readerUi.state.settings)
+            assertEquals(snapshot.viewMode, readerUi.state.viewMode)
+        }
 
-        if (expectList) {
-            composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
-        } else {
-            composeRule.onNodeWithTag(AzkarReadingTestTags.Card).assertIsDisplayed()
+        when (snapshot.viewMode) {
+            AzkarReaderViewMode.Cards -> {
+                composeRule.onNodeWithTag(AzkarReadingTestTags.Card)
+                    .performScrollTo()
+                    .assertIsDisplayed()
+            }
+
+            AzkarReaderViewMode.List -> {
+                composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
+                focusItemId?.let { itemId ->
+                    composeRule.onNodeWithTag(AzkarReadingTestTags.ListCardPrefix + itemId)
+                        .performScrollTo()
+                        .assertIsDisplayed()
+                }
+            }
+        }
+
+        focusText?.let { text ->
+            composeRule.onNodeWithText(text)
+                .performScrollTo()
+                .assertIsDisplayed()
         }
 
         if (openSettings) {
@@ -197,6 +325,7 @@ class AzkarPhase4PersistenceScreenshotTest {
             composeRule.onNodeWithTag(AzkarSheetTestTags.Settings).assertIsDisplayed()
         }
 
+        composeRule.waitForIdle()
         val screenshot = captureAfterPresentedFrame()
         saveScreenshot(screenshot, fileName)
     }
