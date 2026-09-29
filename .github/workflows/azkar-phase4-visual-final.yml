@@ -1,0 +1,113 @@
+name: Azkar Phase 4 Visual Final
+
+on:
+  push:
+    branches:
+      - azkar-native-phase4-visual-final-2026-09-29
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Compile screenshot instrumentation APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+
+      - name: Prepare visual-only runner
+        shell: bash
+        run: |
+          mkdir -p phase4-visual phase4-visual-diagnostics
+          cat > phase4-visual-only.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          APP_PACKAGE="app.xalidmuslim.azkar"
+          TEST_PACKAGE="app.xalidmuslim.azkar.test"
+          TEST_COMPONENT="$TEST_PACKAGE/androidx.test.runner.AndroidJUnitRunner"
+          TEST_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarPhase4PersistenceScreenshotTest"
+          REMOTE_DIR="/sdcard/Android/data/$APP_PACKAGE/files/phase2-evidence"
+
+          adb wait-for-device
+          adb install -r app/build/outputs/apk/debug/app-debug.apk
+          adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          adb shell wm size 393x873
+          adb shell wm density 160
+          adb shell settings put system font_scale 1.0
+          timeout 15s adb shell am wait-for-broadcast-idle || true
+          adb logcat -c || true
+
+          run_capture() {
+            local method="$1"
+            local filename="$2"
+
+            set +e
+            adb shell am instrument -w -r -e class "$TEST_CLASS#$method" "$TEST_COMPONENT" | tee "phase4-visual-diagnostics/$method.txt"
+            local exit_code=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$exit_code" -ne 0 ]; then exit "$exit_code"; fi
+            grep -q "OK (1 test)" "phase4-visual-diagnostics/$method.txt"
+
+            adb pull "$REMOTE_DIR/$filename" "phase4-visual/$filename"
+            test -s "phase4-visual/$filename"
+            file "phase4-visual/$filename" | tee "phase4-visual-diagnostics/$method-file.txt"
+            grep -q "PNG image data, 393 x 873" "phase4-visual-diagnostics/$method-file.txt"
+            stat -c '%n %s bytes' "phase4-visual/$filename" | tee -a "phase4-visual-diagnostics/$method-file.txt"
+          }
+
+          run_capture capture393LightPartialProgress azkar_phase4_393_light_partial_progress.png
+          run_capture capture393LightCompletedDhikr azkar_phase4_393_light_completed.png
+          run_capture capture393LightListCompletedItem azkar_phase4_393_light_list_completed.png
+          run_capture capture393DarkCompletedItem azkar_phase4_393_dark_completed.png
+          run_capture capture393LightSettingsRestoredState azkar_phase4_393_light_settings_restored.png
+
+          adb logcat -d -v threadtime > phase4-visual-diagnostics/final-logcat.txt || true
+          if grep -RInE 'ANR in app\.xalidmuslim\.azkar|FATAL EXCEPTION|Process crashed|INSTRUMENTATION_FAILED|ClassNotFoundException|NoClassDefFoundError|Unable to instantiate|Unable to start' phase4-visual-diagnostics/*.txt; then
+            echo "Fatal runtime marker detected"
+            exit 1
+          fi
+
+          echo "Phase 4 Visual Evidence: 5/5 PASS" | tee phase4-visual-diagnostics/summary.txt
+          echo "Startup ANR markers: NONE" | tee -a phase4-visual-diagnostics/summary.txt
+          EOF
+          chmod +x phase4-visual-only.sh
+
+      - name: Enable KVM
+        run: |
+          sudo chmod 666 /dev/kvm
+          ls -l /dev/kvm | tee phase4-visual-diagnostics/kvm.txt
+          echo "KVM WORKING" | tee -a phase4-visual-diagnostics/kvm.txt
+
+      - name: Run Phase 4 visual evidence only
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash phase4-visual-only.sh
+
+      - name: Upload Phase 4 visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: azkar-phase4-visual-final-evidence
+          path: |
+            phase4-visual/**
+            phase4-visual-diagnostics/**
+          if-no-files-found: warn
+          retention-days: 7
