@@ -470,7 +470,11 @@ internal fun AzkarDhikrCard(
         .then(interactionModifier)
         .testTag(AzkarReadingTestTags.Card)
 
-    AzkarCardSurface(modifier = cardModifier, compact = compactReader) {
+    AzkarCardSurface(
+        modifier = cardModifier,
+        compact = compactReader,
+        completed = completed,
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
