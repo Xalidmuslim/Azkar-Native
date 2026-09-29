@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 internal fun Modifier.azkarShadow(
     layers: List<AzkarShadowLayer>,
@@ -70,6 +71,7 @@ fun AzkarSurface(
 fun AzkarCardSurface(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    completed: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
@@ -83,7 +85,19 @@ fun AzkarCardSurface(
             .azkarShadow(AzkarThemeValues.elevation.card, AzkarRadius.dhikrCard)
             .clip(shape)
             .background(colors.card)
-            .border(AzkarBorders.thin, colors.border, shape)
+            .drawBehind {
+                if (completed) {
+                    drawRect(
+                        color = colors.success,
+                        size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height),
+                    )
+                }
+            }
+            .border(
+                AzkarBorders.thin,
+                if (completed) colors.doneCardBorder else colors.border,
+                shape,
+            )
             .padding(start = horizontal, end = horizontal, top = top, bottom = bottom),
         content = content,
     )
