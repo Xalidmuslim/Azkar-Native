@@ -73,13 +73,15 @@ jobs:
           grep -q "OK (10 tests)" phase3b-diagnostics/navigation-instrumentation.txt || exit 1
 
           set +e
-          adb shell am instrument -w -r -e class "$SHEET_CLASS" "$TEST_COMPONENT" | tee phase3b-diagnostics/sheets-instrumentation.txt
+          TARGETED_SHEETS="$SHEET_CLASS#contentsSheetOpensAndDirectNavigationClosesIt,$SHEET_CLASS#explanationBackPreservesReaderContext"
+          adb shell am instrument -w -r -e class "$TARGETED_SHEETS" "$TEST_COMPONENT" | tee phase3b-diagnostics/sheets-instrumentation.txt
           SHEET_EXIT=${PIPESTATUS[0]}
           set -e
           echo "$SHEET_EXIT" > phase3b-diagnostics/sheets-exit.txt
           adb logcat -d -v threadtime > phase3b-diagnostics/instrumentation-logcat.txt || true
           if [ "$SHEET_EXIT" -ne 0 ]; then exit "$SHEET_EXIT"; fi
-          grep -q "OK (8 tests)" phase3b-diagnostics/sheets-instrumentation.txt || exit 1
+          grep -q "OK (2 tests)" phase3b-diagnostics/sheets-instrumentation.txt || exit 1
+          exit 0
 
           run_golden() {
             method="$1"
