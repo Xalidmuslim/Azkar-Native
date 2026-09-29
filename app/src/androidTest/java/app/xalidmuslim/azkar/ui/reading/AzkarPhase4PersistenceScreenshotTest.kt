@@ -188,36 +188,39 @@ class AzkarPhase4PersistenceScreenshotTest {
         }
         composeRule.waitForIdle()
 
-        val listNode = runCatching {
+        val listLookup = runCatching {
             composeRule.onNodeWithTag(AzkarReadingTestTags.List).fetchSemanticsNode()
-        }.getOrNull()
-        val cardNode = runCatching {
+        }
+        val cardLookup = runCatching {
             composeRule.onNodeWithTag(AzkarReadingTestTags.Card).fetchSemanticsNode()
-        }.getOrNull()
+        }
+        val listNode = listLookup.getOrNull()
+        val cardNode = cardLookup.getOrNull()
         val rootNode = composeRule.onRoot(useUnmergedTree = true).fetchSemanticsNode()
         val activeIndex = navigation.state.activeIndex
         val currentItemId = entries.getOrNull(activeIndex)?.item?.id
 
-        println(
-            "PHASE4_DIAG " +
-                "hydrated=${readerUi.state.isHydrated} " +
+        val diagnostic =
+            "hydrated=${readerUi.state.isHydrated} " +
                 "viewMode=${readerUi.state.viewMode} " +
                 "activeIndex=$activeIndex " +
                 "currentItemId=$currentItemId " +
                 "activeSheet=${readerUi.state.activeSheet} " +
                 "progress=${readerUi.state.progressById.filterKeys { id -> entries.any { it.item.id == id } }} " +
                 "listExists=${listNode != null} " +
+                "listLookupError=${listLookup.exceptionOrNull()?.message} " +
                 "cardExists=${cardNode != null} " +
+                "cardLookupError=${cardLookup.exceptionOrNull()?.message} " +
                 "cardBounds=${cardNode?.boundsInRoot} " +
                 "scrollY=${navigation.currentScrollY} " +
                 "viewport=${rootNode.boundsInRoot}"
-        )
+        println("PHASE4_DIAG $diagnostic")
 
         if (expectList) {
-            check(listNode != null) { "List semantics node does not exist" }
+            check(listNode != null) { "List semantics node does not exist; $diagnostic" }
             composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
         } else {
-            check(cardNode != null) { "Card semantics node does not exist" }
+            check(cardNode != null) { "Card semantics node does not exist; $diagnostic" }
             composeRule.onNodeWithTag(AzkarReadingTestTags.Card).assertIsDisplayed()
         }
 
