@@ -70,11 +70,14 @@ fun AzkarReaderScreen(
         snapshotFlow { readingScrollState.value }.collect(controller::recordScrollY)
     }
 
+    BackHandler(enabled = readerUi.activeSheet != AzkarReaderSheet.None) {
+        resolvedUiController.closeSheet()
+    }
     BackHandler(
-        enabled = readerUi.activeSheet != AzkarReaderSheet.None ||
+        enabled = readerUi.activeSheet == AzkarReaderSheet.None &&
             navigation.history.isNotEmpty(),
     ) {
-        resolvedUiController.handleBack(controller)
+        controller.back()
     }
 
     val context = LocalContext.current
