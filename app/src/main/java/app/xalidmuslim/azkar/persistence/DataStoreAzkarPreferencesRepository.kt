@@ -1,0 +1,163 @@
+package app.xalidmuslim.azkar.persistence
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
+import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
+import app.xalidmuslim.azkar.ui.designsystem.RussianFontFamily
+import app.xalidmuslim.azkar.ui.reading.AzkarReaderSettings
+import app.xalidmuslim.azkar.ui.reading.AzkarReaderStyle
+import app.xalidmuslim.azkar.ui.reading.AzkarReaderViewMode
+import java.time.LocalDate
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+
+class DataStoreAzkarPreferencesRepository(
+    private val dataStore: DataStore<Preferences>,
+) : AzkarPreferencesRepository {
+    override fun observeSnapshot(
+        date: LocalDate,
+        visibleItemIds: Set<String>,
+    ): Flow<AzkarPreferencesSnapshot> =
+        dataStore.data
+            .catch { emit(emptyPreferences()) }
+            .map { preferences -> snapshot(preferences, date, visibleItemIds) }
+
+    override suspend fun saveSettings(settings: AzkarReaderSettings) {
+        val safe = validate(settings)
+        dataStore.edit { preferences ->
+            preferences[AzkarPreferenceKeys.RussianFont] = safe.russianFontFamily.name
+            preferences[AzkarPreferenceKeys.ArabicFont] = safe.arabicFontFamily.name
+            preferences[AzkarPreferenceKeys.ArabicSize] = safe.arabicSizeSp
+            preferences[AzkarPreferenceKeys.RussianSize] = safe.russianSizeSp
+            preferences[AzkarPreferenceKeys.LineHeight] = safe.lineHeight
+            preferences[AzkarPreferenceKeys.ReaderStyle] = safe.readerStyle.name
+            preferences[AzkarPreferenceKeys.ShowTranslation] = safe.showTranslation
+            preferences[AzkarPreferenceKeys.ShowSources] = safe.showSources
+            preferences[AzkarPreferenceKeys.ShowNotes] = safe.showNotes
+            preferences[AzkarPreferenceKeys.Theme] = safe.themeMode.name
+        }
+    }
+
+    override suspend fun saveViewMode(viewMode: AzkarReaderViewMode) {
+        dataStore.edit { preferences ->
+            preferences[AzkarPreferenceKeys.ViewMode] = viewMode.name
+        }
+    }
+
+    override suspend fun incrementProgress(
+        date: LocalDate,
+        stableDhikrId: String,
+        target: Int,
+    ): Int {
+        if (stableDhikrId.isBlank()) return 0
+        val safeTarget = target.coerceAtLeast(1)
+        val key = AzkarPreferenceKeys.progress(date, stableDhikrId)
+        val result = dataStore.edit { preferences ->
+            val current = (preferences[key] ?: 0).coerceIn(0, safeTarget)
+            preferences[key] = if (current >= safeTarget) safeTarget else current + 1
+        }
+        return (result[key] ?: 0).coerceIn(0, safeTarget)
+    }
+
+    override suspend fun resetProgress(
+        date: LocalDate,
+        visibleItemIds: Set<String>,
+    ) {
+        dataStore.edit { preferences ->
+            visibleItemIds
+                .filter { it.isNotBlank() }
+                .forEach { stableId ->
+                    preferences[AzkarPreferenceKeys.progress(date, stableId)] = 0
+                }
+        }
+    }
+
+    private fun snapshot(
+        preferences: Preferences,
+        date: LocalDate,
+        visibleItemIds: Set<String>,
+    ): AzkarPreferencesSnapshot {
+        val defaults = AzkarReaderSettings()
+        val settings = AzkarReaderSettings(
+            russianFontFamily = enumOrDefault(
+                preferences[AzkarPreferenceKeys.RussianFont],
+                RussianFontFamily.values(),
+                defaults.russianFontFamily,
+            ),
+            arabicFontFamily = enumOrDefault(
+                preferences[AzkarPreferenceKeys.ArabicFont],
+                ArabicFontFamily.values(),
+                defaults.arabicFontFamily,
+            ),
+            arabicSizeSp = validatedFloat(
+                preferences[AzkarPreferenceKeys.ArabicSize],
+                defaults.arabicSizeSp,
+                22f,
+                44f,
+            ),
+            russianSizeSp = validatedFloat(
+                preferences[AzkarPreferenceKeys.RussianSize],
+                defaults.russianSizeSp,
+                13f,
+                25f,
+            ),
+            lineHeight = validatedFloat(
+                preferences[AzkarPreferenceKeys.LineHeight],
+                defaults.lineHeight,
+                1.25f,
+                2.00f,
+            ),
+            readerStyle = enumOrDefault(
+                preferences[AzkarPreferenceKeys.ReaderStyle],
+                AzkarReaderStyle.values(),
+                AzkarReaderStyle.Book,
+            ),
+            showTranslation = preferences[AzkarPreferenceKeys.ShowTranslation] ?: true,
+            showSources = preferences[AzkarPreferenceKeys.ShowSources] ?: true,
+            showNotes = preferences[AzkarPreferenceKeys.ShowNotes] ?: true,
+            themeMode = enumOrDefault(
+                preferences[AzkarPreferenceKeys.Theme],
+                AzkarThemeMode.values(),
+                AzkarThemeMode.System,
+            ),
+        )
+        val viewMode = enumOrDefault(
+            preferences[AzkarPreferenceKeys.ViewMode],
+            AzkarReaderViewMode.values(),
+            AzkarReaderViewMode.Cards,
+        )
+        val progress = visibleItemIds.associateWith { stableId ->
+            (preferences[AzkarPreferenceKeys.progress(date, stableId)] ?: 0).coerceAtLeast(0)
+        }
+        return AzkarPreferencesSnapshot(settings, viewMode, progress)
+    }
+
+    private fun validate(settings: AzkarReaderSettings): AzkarReaderSettings {
+        val defaults = AzkarReaderSettings()
+        return settings.copy(
+            arabicSizeSp = validatedFloat(settings.arabicSizeSp, defaults.arabicSizeSp, 22f, 44f),
+            russianSizeSp = validatedFloat(settings.russianSizeSp, defaults.russianSizeSp, 13f, 25f),
+            lineHeight = validatedFloat(settings.lineHeight, defaults.lineHeight, 1.25f, 2.00f),
+        )
+    }
+
+    private fun validatedFloat(
+        value: Float?,
+        default: Float,
+        min: Float,
+        max: Float,
+    ): Float = value
+        ?.takeIf { it.isFinite() }
+        ?.coerceIn(min, max)
+        ?: default
+
+    private fun <T : Enum<T>> enumOrDefault(
+        raw: String?,
+        values: Array<T>,
+        default: T,
+    ): T = values.firstOrNull { it.name == raw } ?: default
+}
