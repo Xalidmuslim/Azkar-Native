@@ -76,6 +76,9 @@ internal object AzkarReadingTestTags {
     const val ReadingArea = "azkar-reading-area"
     const val Previous = "azkar-previous"
     const val Next = "azkar-next"
+    const val OpenContents = "azkar-open-contents"
+    const val OpenSettingsTop = "azkar-open-settings-top"
+    const val OpenSettingsToolbar = "azkar-open-settings-toolbar"
 }
 
 private const val SourceNoteText =
@@ -93,6 +96,13 @@ fun AzkarGoldenReadingScreen(
     shellScrollState: ScrollState? = null,
     readingScrollState: ScrollState? = null,
     readingAreaModifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {},
+    onOpenContents: () -> Unit = {},
+    onOpenExplanation: (String) -> Unit = {},
+    compactReader: Boolean = false,
+    showTranslation: Boolean = true,
+    showSources: Boolean = true,
+    showNotes: Boolean = true,
 ) {
     AzkarSurface(modifier = modifier.fillMaxWidth().testTag(AzkarReadingTestTags.Screen)) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -119,17 +129,22 @@ fun AzkarGoldenReadingScreen(
                 )
 
             Column(modifier = shellModifier) {
-                AzkarHeader()
+                AzkarHeader(onOpenSettings)
                 AzkarSourceNote()
                 AzkarPeriodTabs(state.period)
                 AzkarProgressCard(state)
-                AzkarReaderToolbar(state, narrow)
+                AzkarReaderToolbar(state, narrow, onOpenContents, onOpenSettings)
                 AzkarDhikrCard(
                     state = state,
                     narrow = narrow,
                     scrollState = readingScrollState,
                     maxHeight = readingMaxHeight,
                     interactionModifier = readingAreaModifier,
+                    compactReader = compactReader,
+                    showTranslation = showTranslation,
+                    showSources = showSources,
+                    showNotes = showNotes,
+                    onOpenExplanation = { onOpenExplanation(state.item.id) },
                 )
                 AzkarPager(
                     state = state,
@@ -144,7 +159,7 @@ fun AzkarGoldenReadingScreen(
 }
 
 @Composable
-private fun AzkarHeader() {
+private fun AzkarHeader(onOpenSettings: () -> Unit) {
     val colors = AzkarThemeValues.colors
     Row(
         modifier = Modifier
@@ -191,7 +206,10 @@ private fun AzkarHeader() {
                 )
             }
         }
-        AzkarIconButton(onClick = {}) {
+        AzkarIconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.testTag(AzkarReadingTestTags.OpenSettingsTop),
+        ) {
             BasicText(
                 text = "⚙",
                 style = AzkarThemeValues.typography.translation.copy(
@@ -339,7 +357,12 @@ private fun buildProgressLabel(state: AzkarGoldenReadingUiState): AnnotatedStrin
 }
 
 @Composable
-private fun AzkarReaderToolbar(state: AzkarGoldenReadingUiState, narrow: Boolean) {
+private fun AzkarReaderToolbar(
+    state: AzkarGoldenReadingUiState,
+    narrow: Boolean,
+    onOpenContents: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.readingToolbar)
     Row(
@@ -355,14 +378,22 @@ private fun AzkarReaderToolbar(state: AzkarGoldenReadingUiState, narrow: Boolean
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.readingToolbarGap),
     ) {
-        AzkarToolbarButton(if (narrow) "☷" else "☷ Содержание")
+        AzkarToolbarButton(
+            text = if (narrow) "☷" else "☷ Содержание",
+            onClick = onOpenContents,
+            modifier = Modifier.testTag(AzkarReadingTestTags.OpenContents),
+        )
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             BasicText(
                 text = "${state.position} из ${state.total}",
                 style = AzkarThemeValues.typography.toolbarPosition.copy(color = colors.muted),
             )
         }
-        AzkarIconButton(onClick = {}, size = AzkarIconButtonSize.Compact) {
+        AzkarIconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.testTag(AzkarReadingTestTags.OpenSettingsToolbar),
+            size = AzkarIconButtonSize.Compact,
+        ) {
             BasicText(
                 text = "⚙",
                 style = AzkarThemeValues.typography.translation.copy(
@@ -375,13 +406,18 @@ private fun AzkarReaderToolbar(state: AzkarGoldenReadingUiState, narrow: Boolean
 }
 
 @Composable
-private fun AzkarToolbarButton(text: String) {
+private fun AzkarToolbarButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.toolbarButton)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .defaultMinSize(minHeight = AzkarDimensions.toolbarButtonMinHeight)
             .clip(shape)
+            .clickable(onClick = onClick)
             .background(colors.card)
             .border(AzkarBorders.thin, colors.border, shape)
             .padding(horizontal = AzkarSpacing.toolbarButtonHorizontal),
@@ -401,6 +437,11 @@ private fun AzkarDhikrCard(
     scrollState: ScrollState?,
     maxHeight: Dp?,
     interactionModifier: Modifier,
+    compactReader: Boolean,
+    showTranslation: Boolean,
+    showSources: Boolean,
+    showNotes: Boolean,
+    onOpenExplanation: () -> Unit,
 ) {
     val item = state.item
     val colors = AzkarThemeValues.colors
@@ -412,7 +453,7 @@ private fun AzkarDhikrCard(
         .then(interactionModifier)
         .testTag(AzkarReadingTestTags.Card)
 
-    AzkarCardSurface(modifier = cardModifier) {
+    AzkarCardSurface(modifier = cardModifier, compact = compactReader) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -445,7 +486,7 @@ private fun AzkarDhikrCard(
                         modifier = Modifier.padding(top = AzkarSpacing.headingTop),
                         style = AzkarThemeValues.typography.cardHeading.copy(color = colors.foreground),
                     )
-                    if (item.disputed) {
+                    if (showNotes && item.disputed) {
                         val badgeShape = RoundedCornerShape(AzkarRadius.pill)
                         Box(
                             modifier = Modifier
@@ -499,38 +540,42 @@ private fun AzkarDhikrCard(
                 style = AzkarThemeValues.typography.arabicBody.copy(color = colors.foreground),
             )
 
-            BasicText(
-                text = item.translation,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .topRule(colors.border, dashed = false)
-                    .padding(top = AzkarSpacing.translationTop)
-                    .testTag(AzkarReadingTestTags.Translation),
-                style = AzkarThemeValues.typography.translation.copy(color = colors.foreground),
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = AzkarSpacing.sourceTop)
-                    .topRule(colors.border, dashed = true)
-                    .padding(top = AzkarSpacing.sourcePaddingTop)
-                    .testTag(AzkarReadingTestTags.Source),
-                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.sourceGap),
-                verticalAlignment = Alignment.Top,
-            ) {
+            if (showTranslation) {
                 BasicText(
-                    text = "Источник",
-                    style = AzkarThemeValues.typography.sourceRow.copy(color = colors.primary),
-                )
-                BasicText(
-                    text = item.source,
-                    modifier = Modifier.weight(1f),
-                    style = AzkarThemeValues.typography.sourceRow.copy(color = colors.muted),
+                    text = item.translation,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .topRule(colors.border, dashed = false)
+                        .padding(top = AzkarSpacing.translationTop)
+                        .testTag(AzkarReadingTestTags.Translation),
+                    style = AzkarThemeValues.typography.translation.copy(color = colors.foreground),
                 )
             }
 
-            item.note?.let { note ->
+            if (showSources) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = AzkarSpacing.sourceTop)
+                        .topRule(colors.border, dashed = true)
+                        .padding(top = AzkarSpacing.sourcePaddingTop)
+                        .testTag(AzkarReadingTestTags.Source),
+                    horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.sourceGap),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    BasicText(
+                        text = "Источник",
+                        style = AzkarThemeValues.typography.sourceRow.copy(color = colors.primary),
+                    )
+                    BasicText(
+                        text = item.source,
+                        modifier = Modifier.weight(1f),
+                        style = AzkarThemeValues.typography.sourceRow.copy(color = colors.muted),
+                    )
+                }
+            }
+
+            if (showNotes) item.note?.let { note ->
                 val noteShape = RoundedCornerShape(AzkarRadius.noteBox)
                 Row(
                     modifier = Modifier
@@ -561,6 +606,7 @@ private fun AzkarDhikrCard(
 
             if (item.hasInsight) {
                 AzkarExplanationButton(
+                    onClick = onOpenExplanation,
                     modifier = Modifier
                         .padding(top = AzkarSpacing.explainTop)
                         .testTag(AzkarReadingTestTags.Explain),
@@ -580,7 +626,10 @@ private fun AzkarDhikrCard(
 }
 
 @Composable
-private fun AzkarExplanationButton(modifier: Modifier = Modifier) {
+private fun AzkarExplanationButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.explainButton)
     Box(
@@ -589,7 +638,8 @@ private fun AzkarExplanationButton(modifier: Modifier = Modifier) {
             .defaultMinSize(minHeight = AzkarDimensions.explainButtonMinHeight)
             .clip(shape)
             .background(colors.surface)
-            .border(AzkarBorders.thin, colors.border, shape),
+            .border(AzkarBorders.thin, colors.border, shape)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(

@@ -54,6 +54,14 @@ class AzkarReaderNavigationController(
         return true
     }
 
+    fun reopenCurrentAtTop() {
+        state = state.copy(
+            direction = AzkarNavigationDirection.None,
+            generation = state.generation + 1L,
+        )
+        currentScrollY = 0
+    }
+
     fun back(): Boolean {
         val destination = state.history.lastOrNull() ?: return false
         val from = state.activeIndex
