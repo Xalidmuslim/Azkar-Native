@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.SystemClock
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -11,6 +12,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -20,6 +23,7 @@ import androidx.test.uiautomator.UiDevice
 import app.xalidmuslim.azkar.persistence.AzkarDateProvider
 import app.xalidmuslim.azkar.persistence.DataStoreAzkarPreferencesRepository
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
+import app.xalidmuslim.azkar.ui.designsystem.AzkarTheme
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
 import app.xalidmuslim.azkar.ui.designsystem.RussianFontFamily
 import java.io.File
@@ -30,6 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -88,13 +93,77 @@ class AzkarPhase4PersistenceScreenshotTest {
 
     @Test
     fun capture393LightPartialProgress() {
-        runBlocking {
-            repository.saveSettings(AzkarReaderSettings(themeMode = AzkarThemeMode.Light))
-            repository.incrementProgress(date, "muawwidhat", 3)
+        val target = AzkarGoldenReadingFixtures.Muawwidhat
+        val unrelated = AzkarGoldenReadingFixtures.BaqarahLastTwo
+        val expectedSettings = AzkarReaderSettings(themeMode = AzkarThemeMode.Light)
+        val visibleIds = setOf(target.id, unrelated.id)
+
+        val snapshot = runBlocking {
+            repository.saveSettings(expectedSettings)
+            repository.incrementProgress(date, target.id, target.count)
+            repository.observeSnapshot(date, visibleIds).first()
         }
-        renderAndCapture(
-            fileName = "azkar_phase4_393_light_partial_progress.png",
+
+        assertEquals(date, dateProvider.currentDate())
+        assertEquals(AzkarReaderViewMode.Cards, snapshot.viewMode)
+        assertEquals(expectedSettings, snapshot.settings)
+        assertEquals(3, target.count)
+        assertEquals(1, snapshot.progressById[target.id])
+        assertEquals(0, snapshot.progressById[unrelated.id])
+        assertEquals(
+            mapOf(
+                target.id to 1,
+                unrelated.id to 0,
+            ),
+            snapshot.progressById,
         )
+
+        val currentCount = requireNotNull(snapshot.progressById[target.id])
+        val visualState = AzkarGoldenReadingUiState(
+            item = target,
+            period = AzkarPeriod.Morning,
+            position = 1,
+            total = entries.size,
+            completedItems = 0,
+            currentCount = currentCount,
+        )
+
+        composeRule.setContent {
+            val shellScrollState = rememberScrollState()
+            val readingScrollState = rememberScrollState()
+            val settings = snapshot.settings
+
+            AzkarTheme(
+                themeMode = settings.themeMode,
+                russianFontFamily = settings.russianFontFamily,
+                arabicFontFamily = settings.arabicFontFamily,
+                arabicSizeSp = settings.arabicSizeSp,
+                russianSizeSp = settings.russianSizeSp,
+                readerLineHeight = settings.lineHeight,
+            ) {
+                AzkarGoldenReadingScreen(
+                    state = visualState,
+                    modifier = Modifier.fillMaxSize(),
+                    shellScrollState = shellScrollState,
+                    readingScrollState = readingScrollState,
+                    compactReader = settings.readerStyle == AzkarReaderStyle.Compact,
+                    showTranslation = settings.showTranslation,
+                    showSources = settings.showSources,
+                    showNotes = settings.showNotes,
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(AzkarReadingTestTags.Card).assertIsDisplayed()
+        composeRule.onNodeWithTag(AzkarReadingTestTags.CountActionPrefix + target.id)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("1 / 3").assertIsDisplayed()
+        composeRule.waitForIdle()
+
+        val screenshot = captureAfterPresentedFrame()
+        saveScreenshot(screenshot, "azkar_phase4_393_light_partial_progress.png")
     }
 
     @Test
