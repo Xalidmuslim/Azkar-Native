@@ -9,7 +9,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,3 +32,162 @@ jobs:
 
       - name: Lint
         run: ./gradlew :app:lintDebug --stacktrace
+
+      - name: Compile instrumentation APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+
+      - name: Prepare Phase 4 instrumentation
+        shell: bash
+        run: |
+          mkdir -p phase4-diagnostics phase4-evidence
+          cat > phase4-persistence.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          APP_PACKAGE="app.xalidmuslim.azkar"
+          TEST_PACKAGE="app.xalidmuslim.azkar.test"
+          TEST_COMPONENT="$TEST_PACKAGE/androidx.test.runner.AndroidJUnitRunner"
+          NAV_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarReaderNavigationInstrumentedTest"
+          SHEET_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarReaderSheetInstrumentedTest"
+          LIST_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarReaderListModeInstrumentedTest"
+          PHASE4_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarReaderPersistenceInstrumentedTest"
+          GOLDEN_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarGoldenReadingScreenshotTest"
+          LIST_GOLDEN_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarListModeScreenshotTest"
+          PHASE4_GOLDEN_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarPhase4PersistenceScreenshotTest"
+          REMOTE_DIR="/sdcard/Android/data/$APP_PACKAGE/files/phase2-evidence"
+
+          adb wait-for-device
+          adb shell getprop sys.boot_completed | tee phase4-diagnostics/boot-completed.txt
+          adb devices -l | tee phase4-diagnostics/adb-devices.txt
+
+          adb install -r app/build/outputs/apk/debug/app-debug.apk
+          adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
+          adb shell wm size 393x873
+          adb shell wm density 160
+          adb shell settings put system font_scale 1.0
+          timeout 15s adb shell am wait-for-broadcast-idle || true
+          adb logcat -c || true
+
+          run_class() {
+            local class_name="$1"
+            local expected="$2"
+            local output="$3"
+
+            set +e
+            adb shell am instrument -w -r -e class "$class_name" "$TEST_COMPONENT" | tee "$output"
+            local exit_code=${PIPESTATUS[0]}
+            set -e
+            if [ "$exit_code" -ne 0 ]; then exit "$exit_code"; fi
+            grep -q "OK ($expected tests)" "$output" || exit 1
+          }
+
+          run_class "$NAV_CLASS" 10 phase4-diagnostics/navigation-instrumentation.txt
+          run_class "$SHEET_CLASS" 8 phase4-diagnostics/sheets-instrumentation.txt
+          run_class "$LIST_CLASS" 15 phase4-diagnostics/list-instrumentation.txt
+          run_class "$PHASE4_CLASS" 15 phase4-diagnostics/phase4-instrumentation.txt
+
+          run_capture() {
+            local class_name="$1"
+            local method="$2"
+            local screen="$3"
+            local filename="$4"
+            local width="$5"
+            local height="$6"
+
+            adb shell wm size "$screen"
+            adb shell wm density 160
+            adb shell settings put system font_scale 1.0
+            timeout 15s adb shell am wait-for-broadcast-idle || true
+
+            set +e
+            adb shell am instrument -w -r -e class "$class_name#$method" "$TEST_COMPONENT" | tee "phase4-diagnostics/capture-$method.txt"
+            local test_exit=${PIPESTATUS[0]}
+            set -e
+            if [ "$test_exit" -ne 0 ]; then return 1; fi
+            grep -q "OK (1 test)" "phase4-diagnostics/capture-$method.txt" || return 1
+
+            adb pull "$REMOTE_DIR/$filename" "phase4-evidence/$filename"
+            test -s "phase4-evidence/$filename"
+            stat -c '%n %s bytes' "phase4-evidence/$filename" | tee "phase4-diagnostics/file-$method.txt"
+            file "phase4-evidence/$filename" | tee -a "phase4-diagnostics/file-$method.txt"
+            grep -q "PNG image data, $width x $height" "phase4-diagnostics/file-$method.txt"
+          }
+
+          run_capture "$GOLDEN_CLASS" capture360Light 360x800 azkar_360x800_light.png 360 800
+          run_capture "$GOLDEN_CLASS" capture393Light 393x873 azkar_393x873_light.png 393 873
+          run_capture "$GOLDEN_CLASS" capture412Light 412x915 azkar_412x915_light.png 412 915
+          run_capture "$GOLDEN_CLASS" capture393Dark 393x873 azkar_393x873_dark.png 393 873
+          run_capture "$GOLDEN_CLASS" capture393LongExistingDhikr 393x873 azkar_393x873_long_baqarah.png 393 873
+
+          run_capture "$LIST_GOLDEN_CLASS" capture360LightList 360x800 azkar_360x800_light_list.png 360 800
+          run_capture "$LIST_GOLDEN_CLASS" capture393LightList 393x873 azkar_393x873_light_list.png 393 873
+          run_capture "$LIST_GOLDEN_CLASS" capture412LightList 412x915 azkar_412x915_light_list.png 412 915
+          run_capture "$LIST_GOLDEN_CLASS" capture393DarkList 393x873 azkar_393x873_dark_list.png 393 873
+          run_capture "$LIST_GOLDEN_CLASS" capture393LightListMiddle 393x873 azkar_393x873_light_list_middle.png 393 873
+          run_capture "$LIST_GOLDEN_CLASS" capture393LightContentsModeSwitch 393x873 azkar_393x873_light_contents_mode_switch.png 393 873
+
+          run_capture "$PHASE4_GOLDEN_CLASS" capture393LightPartialProgress 393x873 azkar_phase4_393_light_partial_progress.png 393 873
+          run_capture "$PHASE4_GOLDEN_CLASS" capture393LightCompletedDhikr 393x873 azkar_phase4_393_light_completed.png 393 873
+          run_capture "$PHASE4_GOLDEN_CLASS" capture393LightListCompletedItem 393x873 azkar_phase4_393_light_list_completed.png 393 873
+          run_capture "$PHASE4_GOLDEN_CLASS" capture393DarkCompletedItem 393x873 azkar_phase4_393_dark_completed.png 393 873
+          run_capture "$PHASE4_GOLDEN_CLASS" capture393LightSettingsRestoredState 393x873 azkar_phase4_393_light_settings_restored.png 393 873
+
+          adb logcat -d -v threadtime > phase4-diagnostics/final-logcat.txt || true
+          if grep -RInE 'ANR in app\.xalidmuslim\.azkar|FATAL EXCEPTION|Process crashed|INSTRUMENTATION_FAILED|ClassNotFoundException|NoClassDefFoundError|Unable to instantiate|Unable to start' phase4-diagnostics/*.txt phase4-diagnostics/final-logcat.txt 2>/dev/null; then
+            echo "Fatal runtime marker detected"
+            exit 1
+          fi
+
+          {
+            echo "Phase 3A Navigation: 10/10 PASS"
+            echo "Phase 3B Sheets: 8/8 PASS"
+            echo "Phase 3C List: 15/15 PASS"
+            echo "Phase 4 Persistence: 15/15 PASS"
+            echo "Cards Golden: 5/5 PASS"
+            echo "List Visual: 6/6 PASS"
+            echo "Phase 4 Visual Evidence: 5/5 PASS"
+            echo "Startup ANR markers: NONE"
+          } | tee phase4-diagnostics/phase4-summary.txt
+
+          adb uninstall "$TEST_PACKAGE" || true
+          adb uninstall "$APP_PACKAGE" || true
+          adb shell wm size reset || true
+          adb shell wm density reset || true
+          adb shell settings put system font_scale 1.0 || true
+          EOF
+          chmod +x phase4-persistence.sh
+
+      - name: Enable KVM
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm | tee phase4-diagnostics/kvm.txt
+            echo "KVM WORKING" | tee -a phase4-diagnostics/kvm.txt
+          else
+            echo "/dev/kvm is not available"
+            exit 1
+          fi
+
+      - name: Run Phase 4 instrumentation and visual regression
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash phase4-persistence.sh
+
+      - name: Upload Phase 4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: azkar-phase4-persistence-evidence
+          path: |
+            phase4-evidence/**
+            phase4-diagnostics/**
+            app/build/test-results/testDebugUnitTest/**
+            app/build/reports/lint-results-debug.html
+          if-no-files-found: error
+          retention-days: 30
