@@ -3,10 +3,18 @@ package app.xalidmuslim.azkar.ui.reading
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.xalidmuslim.azkar.persistence.AzkarDateProvider
+import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
+import app.xalidmuslim.azkar.persistence.SystemAzkarDateProvider
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
 import app.xalidmuslim.azkar.ui.designsystem.RussianFontFamily
+import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 enum class AzkarReaderSheet {
     None,
@@ -43,6 +51,8 @@ data class AzkarReaderUiState(
     val selectedExplanationId: String? = null,
     val settings: AzkarReaderSettings = AzkarReaderSettings(),
     val viewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
+    val progressById: Map<String, Int> = emptyMap(),
+    val isHydrated: Boolean = true,
 ) {
     fun allowsHorizontalPaging(entryCount: Int): Boolean =
         viewMode == AzkarReaderViewMode.Cards &&
@@ -53,14 +63,56 @@ data class AzkarReaderUiState(
 class AzkarReaderUiController(
     initialSettings: AzkarReaderSettings = AzkarReaderSettings(),
     initialViewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
+    private val repository: AzkarPreferencesRepository? = null,
+    dateProvider: AzkarDateProvider = SystemAzkarDateProvider,
+    private val persistenceScope: CoroutineScope? = null,
+    visibleItemIds: Set<String> = emptySet(),
 ) {
+    private val sessionDate: LocalDate = dateProvider.currentDate()
+    private val persistentVisibleItemIds: Set<String> = visibleItemIds.toSet()
+
     var state by mutableStateOf(
         AzkarReaderUiState(
             settings = initialSettings,
             viewMode = initialViewMode,
+            progressById = if (repository == null) {
+                emptyMap()
+            } else {
+                persistentVisibleItemIds.associateWith { 0 }
+            },
+            isHydrated = repository == null,
         ),
     )
         private set
+
+    init {
+        if (repository != null) {
+            val scope = requireNotNull(persistenceScope) {
+                "Persistent reader controller requires a CoroutineScope"
+            }
+            scope.launch {
+                try {
+                    repository.observeSnapshot(sessionDate, persistentVisibleItemIds)
+                        .collect { snapshot ->
+                            state = state.copy(
+                                settings = snapshot.settings,
+                                viewMode = snapshot.viewMode,
+                                progressById = snapshot.progressById,
+                                isHydrated = true,
+                            )
+                        }
+                } catch (error: Throwable) {
+                    if (error is CancellationException) throw error
+                    state = state.copy(
+                        settings = AzkarReaderSettings(),
+                        viewMode = AzkarReaderViewMode.Cards,
+                        progressById = persistentVisibleItemIds.associateWith { 0 },
+                        isHydrated = true,
+                    )
+                }
+            }
+        }
+    }
 
     fun openSettings() {
         state = state.copy(
@@ -93,17 +145,63 @@ class AzkarReaderUiController(
     }
 
     fun updateSettings(transform: (AzkarReaderSettings) -> AzkarReaderSettings) {
-        state = state.copy(settings = transform(state.settings))
+        val updated = transform(state.settings)
+        if (updated == state.settings) return
+        state = state.copy(settings = updated)
+        launchPersistence { repository?.saveSettings(updated) }
     }
 
     fun setViewMode(viewMode: AzkarReaderViewMode): Boolean {
         if (state.viewMode == viewMode) return false
         state = state.copy(viewMode = viewMode)
+        launchPersistence { repository?.saveViewMode(viewMode) }
         return true
+    }
+
+    fun currentCount(stableDhikrId: String, fallback: Int = 0): Int =
+        state.progressById[stableDhikrId] ?: fallback
+
+    fun incrementProgress(stableDhikrId: String, target: Int): Boolean {
+        if (target <= 0) return false
+        val current = currentCount(stableDhikrId).coerceIn(0, target)
+        if (current >= target) return false
+
+        state = state.copy(
+            progressById = state.progressById + (stableDhikrId to current + 1),
+        )
+        launchPersistence {
+            repository?.incrementProgress(sessionDate, stableDhikrId, target)
+        }
+        return true
+    }
+
+    fun resetProgress(visibleItemIds: Collection<String>) {
+        val ids = visibleItemIds.filter { it.isNotBlank() }.toSet()
+        if (ids.isEmpty()) return
+        state = state.copy(
+            progressById = state.progressById.toMutableMap().apply {
+                ids.forEach { put(it, 0) }
+            },
+        )
+        launchPersistence {
+            repository?.resetProgress(sessionDate, ids)
+        }
     }
 
     fun handleBack(navigation: AzkarReaderNavigationController): Boolean {
         if (closeSheet()) return true
         return navigation.back()
+    }
+
+    private fun launchPersistence(block: suspend () -> Unit) {
+        val scope = persistenceScope ?: return
+        if (repository == null) return
+        scope.launch {
+            try {
+                block()
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+            }
+        }
     }
 }
