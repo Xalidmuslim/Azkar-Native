@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -215,13 +214,11 @@ class AzkarPhase4PersistenceScreenshotTest {
         )
 
         if (expectList) {
-            composeRule.onNodeWithTag(AzkarReadingTestTags.List)
-                .assertExists()
-                .assertIsDisplayed()
+            check(listNode != null) { "List semantics node does not exist" }
+            composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
         } else {
-            composeRule.onNodeWithTag(AzkarReadingTestTags.Card)
-                .assertExists()
-                .assertIsDisplayed()
+            check(cardNode != null) { "Card semantics node does not exist" }
+            composeRule.onNodeWithTag(AzkarReadingTestTags.Card).assertIsDisplayed()
         }
 
         if (openSettings) {
