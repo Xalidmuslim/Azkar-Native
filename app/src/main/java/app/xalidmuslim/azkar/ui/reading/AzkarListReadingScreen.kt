@@ -39,13 +39,19 @@ internal fun AzkarListReadingScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit,
     onOpenContents: () -> Unit,
+    onOpenSourceInfo: () -> Unit,
     onIncrementCount: (String, Int) -> Unit,
     onResetProgress: () -> Unit,
     onPeriodChange: (AzkarPeriod) -> Unit = {},
+    hideCompleted: Boolean = false,
+    onOpenActions: (Int, String) -> Unit,
     onOpenExplanation: (Int, String) -> Unit,
 ) {
     val selected = entries[activeIndex.coerceIn(entries.indices)]
     val completedItems = countCompletedItems(entries)
+    val visibleEntries = entries.filterIndexed { index, entry ->
+        !hideCompleted || entry.currentCount < entry.item.count || index == activeIndex
+    }
     val summaryState = AzkarGoldenReadingUiState(
         item = selected.item,
         period = period,
@@ -77,7 +83,7 @@ internal fun AzkarListReadingScreen(
                 item(key = "reader-header") {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         AzkarHeader(onOpenSettings)
-                        AzkarSourceNote()
+                        AzkarSourceNote(onOpenSourceInfo)
                         AzkarPeriodTabs(period, onPeriodChange)
                         AzkarProgressCard(summaryState, onResetProgress)
                     }
@@ -94,13 +100,14 @@ internal fun AzkarListReadingScreen(
                 }
 
                 itemsIndexed(
-                    items = entries,
+                    items = visibleEntries,
                     key = { _, entry -> entry.item.id },
                 ) { index, entry ->
+                    val originalIndex = entries.indexOfFirst { it.item.id == entry.item.id }
                     val state = AzkarGoldenReadingUiState(
                         item = entry.item,
                         period = period,
-                        position = index + 1,
+                        position = originalIndex + 1,
                         total = entries.size,
                         completedItems = completedItems,
                         currentCount = entry.currentCount,
@@ -121,14 +128,17 @@ internal fun AzkarListReadingScreen(
                             showSources = settings.showSources,
                             showNotes = settings.showNotes,
                             onOpenExplanation = {
-                                onOpenExplanation(index, entry.item.id)
+                                onOpenExplanation(originalIndex, entry.item.id)
+                            },
+                            onOpenActions = {
+                                onOpenActions(originalIndex, entry.item.id)
                             },
                             onIncrementCount = {
                                 onIncrementCount(entry.item.id, entry.item.count)
                             },
                         )
                     }
-                    if (index != entries.lastIndex) {
+                    if (index != visibleEntries.lastIndex) {
                         Spacer(modifier = Modifier.height(AzkarSpacing.pagerTop))
                     }
                 }
