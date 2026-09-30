@@ -1,21 +1,7 @@
 package app.xalidmuslim.azkar.ui.reading
 
-enum class AzkarPeriod {
-    Morning,
-    Evening,
-}
-
-data class AzkarReadingItem(
-    val id: String,
-    val title: String,
-    val count: Int,
-    val disputed: Boolean,
-    val arabic: String,
-    val translation: String,
-    val source: String,
-    val note: String?,
-    val hasInsight: Boolean,
-)
+typealias AzkarPeriod = app.xalidmuslim.azkar.content.AzkarPeriod
+typealias AzkarReadingItem = app.xalidmuslim.azkar.content.AzkarReadingItem
 
 data class AzkarGoldenReadingUiState(
     val item: AzkarReadingItem,
