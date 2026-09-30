@@ -2,6 +2,7 @@ package app.xalidmuslim.azkar.ui.reading
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +85,16 @@ internal fun AzkarProductionReaderScreen(
     uiController: AzkarReaderUiController,
     modifier: Modifier = Modifier,
 ) {
+    var restoredPeriod by remember(uiController) { mutableStateOf(false) }
+    val readerUi = uiController.state
+
+    LaunchedEffect(readerUi.isHydrated, readerUi.lastPeriod) {
+        if (readerUi.isHydrated && !restoredPeriod) {
+            periodController.switchTo(readerUi.lastPeriod)
+            restoredPeriod = true
+        }
+    }
+
     val period = periodController.period
     val entries = remember(period) {
         AzkarCatalog.readingItemsFor(period).map(::AzkarReaderEntry)
@@ -98,6 +109,7 @@ internal fun AzkarProductionReaderScreen(
             modifier = modifier.fillMaxSize(),
             onPeriodChange = { newPeriod ->
                 if (periodController.switchTo(newPeriod)) {
+                    uiController.setLastPeriod(newPeriod)
                     uiController.closeSheet()
                 }
             },
