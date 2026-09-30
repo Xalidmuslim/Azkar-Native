@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.xalidmuslim.azkar.content.AzkarExplanationEnrichment
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
 import app.xalidmuslim.azkar.ui.designsystem.AzkarBorders
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
@@ -384,18 +385,25 @@ private fun AzkarExplanationSheet(
 ) {
     val colors = AzkarThemeValues.colors
     val explanation = item.explanation
+    val extra = AzkarExplanationEnrichment.forId(item.id)
     val meaning = explanation?.meaning?.takeIf { it.isNotBlank() } ?: item.translation
     val relatedReport = explanation?.relatedReport?.takeIf { it.isNotBlank() }
+    val keyMeanings = extra.keyMeanings.filter { it.isNotBlank() }
+    val heartFocus = extra.heartFocus?.takeIf { it.isNotBlank() }
+    val benefits = extra.benefits.filter { it.isNotBlank() }
+    val practicalApplication = extra.practicalApplication?.takeIf { it.isNotBlank() }
     val scholarNotes = buildList {
         explanation?.scholarNotes
             ?.filter { it.isNotBlank() }
             ?.let(::addAll)
+        extra.scholarNotes.filter { it.isNotBlank() }.let(::addAll)
         item.note?.takeIf { it.isNotBlank() }?.let(::add)
     }.distinct()
-    val references = explanation?.references
-        ?.filter { it.isNotBlank() }
-        ?.ifEmpty { null }
-        ?: listOf(item.source).filter { it.isNotBlank() }
+    val references = buildList {
+        explanation?.references?.filter { it.isNotBlank() }?.let(::addAll)
+        extra.references.filter { it.isNotBlank() }.let(::addAll)
+        item.source.takeIf { it.isNotBlank() }?.let(::add)
+    }.distinct()
 
     AzkarBottomSheet(
         title = item.title,
@@ -418,7 +426,7 @@ private fun AzkarExplanationSheet(
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.insightBodyGap),
         ) {
             if (meaning.isNotBlank()) {
-                AzkarInsightSection("Смысл") {
+                AzkarInsightSection("Что это значит") {
                     BasicText(
                         text = meaning,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -427,8 +435,28 @@ private fun AzkarExplanationSheet(
                     )
                 }
             }
+            if (keyMeanings.isNotEmpty()) {
+                AzkarInsightSection("Ключевые смыслы") {
+                    BasicText(
+                        text = keyMeanings.joinToString("\n\n") { "• $it" },
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
+            heartFocus?.let { focus ->
+                AzkarInsightSection("О чём думать во время чтения") {
+                    BasicText(
+                        text = focus,
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
             relatedReport?.let { report ->
-                AzkarInsightSection("Связанный случай") {
+                AzkarInsightSection("Связанный хадис или случай") {
                     BasicText(
                         text = report,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -438,9 +466,29 @@ private fun AzkarExplanationSheet(
                 }
             }
             if (scholarNotes.isNotEmpty()) {
-                AzkarInsightSection("Примечания учёных") {
+                AzkarInsightSection("Слова учёных") {
                     BasicText(
-                        text = scholarNotes.joinToString("\n\n"),
+                        text = scholarNotes.joinToString("\n\n") { "• $it" },
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
+            if (benefits.isNotEmpty()) {
+                AzkarInsightSection("Польза") {
+                    BasicText(
+                        text = benefits.joinToString("\n\n") { "• $it" },
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
+            practicalApplication?.let { application ->
+                AzkarInsightSection("Как применять смысл") {
+                    BasicText(
+                        text = application,
                         style = AzkarThemeValues.typography.insightBody.copy(
                             color = colors.foreground,
                         ),
