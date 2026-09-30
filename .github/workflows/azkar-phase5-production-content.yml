@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  compile_android_test_only:
+  phase5_instrumentation_only:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,5 +21,59 @@ jobs:
           cache: gradle
       - name: Make Gradle executable
         run: chmod +x gradlew
-      - name: Compile androidTest only
-        run: ./gradlew :app:compileDebugAndroidTestKotlin --stacktrace
+      - name: Assemble app and androidTest
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+      - name: Prepare Phase 5 instrumentation only
+        shell: bash
+        run: |
+          mkdir -p phase5-targeted-diagnostics
+          cat > phase5-targeted-instrumentation.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APP_PACKAGE="app.xalidmuslim.azkar"
+          TEST_PACKAGE="app.xalidmuslim.azkar.test"
+          TEST_COMPONENT="$TEST_PACKAGE/androidx.test.runner.AndroidJUnitRunner"
+          PHASE5_CLASS="app.xalidmuslim.azkar.ui.reading.AzkarPhase5ProductionContentInstrumentedTest"
+          adb wait-for-device
+          adb install -r app/build/outputs/apk/debug/app-debug.apk
+          adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          adb shell wm size 393x873
+          adb shell wm density 160
+          adb shell settings put system font_scale 1.0
+          timeout 15s adb shell am wait-for-broadcast-idle || true
+          adb logcat -c || true
+          set +e
+          adb shell am instrument -w -r -e class "$PHASE5_CLASS" "$TEST_COMPONENT" | tee phase5-targeted-diagnostics/phase5-instrumentation.txt
+          exit_code=${PIPESTATUS[0]}
+          set -e
+          [ "$exit_code" -eq 0 ]
+          grep -q "OK (20 tests)" phase5-targeted-diagnostics/phase5-instrumentation.txt
+          adb logcat -d -v threadtime > phase5-targeted-diagnostics/final-logcat.txt || true
+          if grep -RInE 'ANR in app\.xalidmuslim\.azkar|FATAL EXCEPTION|Process crashed|INSTRUMENTATION_FAILED|ClassNotFoundException|NoClassDefFoundError|Unable to instantiate|Unable to start' phase5-targeted-diagnostics/*.txt; then
+            echo "Fatal runtime marker detected"
+            exit 1
+          fi
+          EOF
+          chmod +x phase5-targeted-instrumentation.sh
+      - name: Enable KVM
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+          echo "KVM WORKING" | tee phase5-targeted-diagnostics/kvm.txt
+      - name: Run Phase 5 instrumentation only
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash phase5-targeted-instrumentation.sh
+      - name: Upload targeted diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: azkar-phase5-targeted-instrumentation
+          path: phase5-targeted-diagnostics/**
+          if-no-files-found: error
+          retention-days: 7
