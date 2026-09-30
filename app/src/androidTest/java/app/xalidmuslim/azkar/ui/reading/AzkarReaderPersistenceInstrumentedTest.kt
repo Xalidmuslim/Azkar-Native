@@ -258,13 +258,7 @@ class AzkarReaderPersistenceInstrumentedTest {
         } else {
             AzkarReadingTestTags.Card
         }
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            runCatching {
-                composeRule.onNodeWithTag(tag, useUnmergedTree = true)
-                    .fetchSemanticsNode()
-            }.isSuccess
-        }
-        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(tag).fetchSemanticsNode()
     }
 
     private fun openContents() {
