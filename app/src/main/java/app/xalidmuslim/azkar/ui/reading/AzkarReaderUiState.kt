@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import app.xalidmuslim.azkar.persistence.AzkarDateProvider
 import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
 import app.xalidmuslim.azkar.persistence.SystemAzkarDateProvider
+import app.xalidmuslim.azkar.content.AzkarPeriod
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
@@ -21,6 +22,8 @@ enum class AzkarReaderSheet {
     Settings,
     Contents,
     Explanation,
+    SourceInfo,
+    Actions,
 }
 
 enum class AzkarReaderStyle {
@@ -43,15 +46,19 @@ data class AzkarReaderSettings(
     val showTranslation: Boolean = true,
     val showSources: Boolean = true,
     val showNotes: Boolean = true,
+    val hideCompleted: Boolean = false,
     val themeMode: AzkarThemeMode = AzkarThemeMode.System,
 )
 
 data class AzkarReaderUiState(
     val activeSheet: AzkarReaderSheet = AzkarReaderSheet.None,
     val selectedExplanationId: String? = null,
+    val selectedActionId: String? = null,
     val settings: AzkarReaderSettings = AzkarReaderSettings(),
     val viewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
     val progressById: Map<String, Int> = emptyMap(),
+    val lastPeriod: AzkarPeriod = AzkarPeriod.Morning,
+    val lastItemByPeriod: Map<AzkarPeriod, String> = emptyMap(),
     val isHydrated: Boolean = true,
 ) {
     fun allowsHorizontalPaging(entryCount: Int): Boolean =
@@ -98,6 +105,8 @@ class AzkarReaderUiController(
                                 settings = snapshot.settings,
                                 viewMode = snapshot.viewMode,
                                 progressById = snapshot.progressById,
+                                lastPeriod = snapshot.lastPeriod,
+                                lastItemByPeriod = snapshot.lastItemByPeriod,
                                 isHydrated = true,
                             )
                         }
@@ -118,6 +127,7 @@ class AzkarReaderUiController(
         state = state.copy(
             activeSheet = AzkarReaderSheet.Settings,
             selectedExplanationId = null,
+            selectedActionId = null,
         )
     }
 
@@ -125,6 +135,7 @@ class AzkarReaderUiController(
         state = state.copy(
             activeSheet = AzkarReaderSheet.Contents,
             selectedExplanationId = null,
+            selectedActionId = null,
         )
     }
 
@@ -132,6 +143,23 @@ class AzkarReaderUiController(
         state = state.copy(
             activeSheet = AzkarReaderSheet.Explanation,
             selectedExplanationId = itemId,
+            selectedActionId = null,
+        )
+    }
+
+    fun openSourceInfo() {
+        state = state.copy(
+            activeSheet = AzkarReaderSheet.SourceInfo,
+            selectedExplanationId = null,
+            selectedActionId = null,
+        )
+    }
+
+    fun openActions(itemId: String) {
+        state = state.copy(
+            activeSheet = AzkarReaderSheet.Actions,
+            selectedExplanationId = null,
+            selectedActionId = itemId,
         )
     }
 
@@ -140,6 +168,7 @@ class AzkarReaderUiController(
         state = state.copy(
             activeSheet = AzkarReaderSheet.None,
             selectedExplanationId = null,
+            selectedActionId = null,
         )
         return true
     }
@@ -156,6 +185,19 @@ class AzkarReaderUiController(
         state = state.copy(viewMode = viewMode)
         launchPersistence { repository?.saveViewMode(viewMode) }
         return true
+    }
+
+    fun setLastPeriod(period: AzkarPeriod) {
+        if (state.lastPeriod == period) return
+        state = state.copy(lastPeriod = period)
+        launchPersistence { repository?.saveLastPeriod(period) }
+    }
+
+    fun saveLastItem(period: AzkarPeriod, stableDhikrId: String) {
+        if (stableDhikrId.isBlank()) return
+        if (state.lastItemByPeriod[period] == stableDhikrId) return
+        state = state.copy(lastItemByPeriod = state.lastItemByPeriod + (period to stableDhikrId))
+        launchPersistence { repository?.saveLastItem(period, stableDhikrId) }
     }
 
     fun currentCount(stableDhikrId: String, fallback: Int = 0): Int =
