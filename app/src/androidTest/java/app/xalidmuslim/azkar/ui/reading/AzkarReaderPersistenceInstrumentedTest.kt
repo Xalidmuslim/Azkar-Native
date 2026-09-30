@@ -1,5 +1,6 @@
 package app.xalidmuslim.azkar.ui.reading
 
+import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.key
@@ -205,11 +206,54 @@ class AzkarReaderPersistenceInstrumentedTest {
     }
 
     private fun awaitSnapshot(
+        label: String,
         ids: Set<String> = entries().map { it.item.id }.toSet(),
         predicate: (AzkarPreferencesSnapshot) -> Boolean,
     ): AzkarPreferencesSnapshot = runBlocking {
-        withTimeout(15_000) {
-            repository.observeSnapshot(dateProvider.date, ids).first(predicate)
+        Log.i(
+            "AzkarPhase4Reset",
+            "await start label=$label date=${dateProvider.date} ids=$ids file=${dataStoreFile.name}",
+        )
+        try {
+            withTimeout(15_000) {
+                repository.observeSnapshot(dateProvider.date, ids).first { snapshot ->
+                    Log.i(
+                        "AzkarPhase4Reset",
+                        "await emission label=$label progress=${snapshot.progressById} " +
+                            "viewMode=${snapshot.viewMode} settings=${snapshot.settings}",
+                    )
+                    predicate(snapshot)
+                }
+            }.also { snapshot ->
+                Log.i(
+                    "AzkarPhase4Reset",
+                    "await satisfied label=$label progress=${snapshot.progressById}",
+                )
+            }
+        } catch (error: Throwable) {
+            Log.e(
+                "AzkarPhase4Reset",
+                "await failed label=$label controller=${readerUi.state} " +
+                    "date=${dateProvider.date} file=${dataStoreFile.absolutePath}",
+                error,
+            )
+            throw error
+        }
+    }
+
+    private fun currentSnapshot(
+        label: String,
+        ids: Set<String> = entries().map { it.item.id }.toSet(),
+    ): AzkarPreferencesSnapshot = runBlocking {
+        withTimeout(5_000) {
+            repository.observeSnapshot(dateProvider.date, ids).first()
+        }.also { snapshot ->
+            Log.i(
+                "AzkarPhase4Reset",
+                "snapshot label=$label date=${dateProvider.date} ids=$ids " +
+                    "progress=${snapshot.progressById} viewMode=${snapshot.viewMode} " +
+                    "settings=${snapshot.settings}",
+            )
         }
     }
 
@@ -221,7 +265,7 @@ class AzkarReaderPersistenceInstrumentedTest {
         composeRule.runOnIdle {
             assertEquals(1, readerUi.currentCount("one"))
         }
-        awaitSnapshot { it.progressById["one"] == 1 }
+        awaitSnapshot("generic") { it.progressById["one"] == 1 }
     }
 
     @Test
@@ -239,7 +283,7 @@ class AzkarReaderPersistenceInstrumentedTest {
     fun countSurvivesReaderRecreation() {
         setReader()
         clickCount("one")
-        awaitSnapshot { it.progressById["one"] == 1 }
+        awaitSnapshot("generic") { it.progressById["one"] == 1 }
 
         recreateReader()
 
@@ -272,23 +316,54 @@ class AzkarReaderPersistenceInstrumentedTest {
 
     @Test
     fun resetClearsCurrentVisibleEntries() {
+        val visibleIds = entries().map { it.item.id }.toSet()
+        Log.i(
+            "AzkarPhase4Reset",
+            "test start date=${dateProvider.date} visibleIds=$visibleIds file=${dataStoreFile.absolutePath}",
+        )
         setReader()
-        clickCount("one")
-        awaitSnapshot { it.progressById["one"] == 1 }
+        composeRule.runOnIdle {
+            Log.i("AzkarPhase4Reset", "hydrated controller=${readerUi.state}")
+        }
+        currentSnapshot("after_hydration", visibleIds)
 
+        clickCount("one")
+        composeRule.runOnIdle {
+            Log.i(
+                "AzkarPhase4Reset",
+                "after increment tap controllerProgress=${readerUi.state.progressById}",
+            )
+        }
+        awaitSnapshot(
+            label = "seeded_progress",
+            ids = visibleIds,
+        ) { it.progressById["one"] == 1 }
+        currentSnapshot("before_reset", visibleIds)
+
+        Log.i("AzkarPhase4Reset", "tap Reset begin")
         composeRule.onNodeWithTag(AzkarReadingTestTags.ResetProgress)
             .assertIsDisplayed()
             .performClick()
         composeRule.waitForIdle()
+        Log.i("AzkarPhase4Reset", "tap Reset returned")
 
         composeRule.runOnIdle {
+            Log.i(
+                "AzkarPhase4Reset",
+                "after reset UI/controller progress=${readerUi.state.progressById}",
+            )
             assertEquals(0, readerUi.currentCount("one"))
             assertEquals(0, readerUi.currentCount("three"))
             assertEquals(0, readerUi.currentCount("hundred"))
         }
-        awaitSnapshot {
+        awaitSnapshot(
+            label = "after_reset",
+            ids = visibleIds,
+        ) {
             it.progressById.values.all { count -> count == 0 }
         }
+        currentSnapshot("after_reset_confirmed", visibleIds)
+        Log.i("AzkarPhase4Reset", "test end")
     }
 
     @Test
@@ -299,7 +374,7 @@ class AzkarReaderPersistenceInstrumentedTest {
             .performScrollTo()
             .performClick()
         composeRule.waitForIdle()
-        awaitSnapshot { !it.settings.showSources }
+        awaitSnapshot("generic") { !it.settings.showSources }
 
         recreateReader()
 
@@ -315,7 +390,7 @@ class AzkarReaderPersistenceInstrumentedTest {
             .performScrollTo()
             .performClick()
         composeRule.waitForIdle()
-        awaitSnapshot { it.settings.themeMode == AzkarThemeMode.Dark }
+        awaitSnapshot("generic") { it.settings.themeMode == AzkarThemeMode.Dark }
 
         recreateReader()
 
@@ -332,7 +407,7 @@ class AzkarReaderPersistenceInstrumentedTest {
             .performScrollTo()
             .performClick()
         composeRule.waitForIdle()
-        awaitSnapshot { !it.settings.showTranslation }
+        awaitSnapshot("generic") { !it.settings.showTranslation }
 
         recreateReader()
 
@@ -348,7 +423,7 @@ class AzkarReaderPersistenceInstrumentedTest {
         }
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
-        awaitSnapshot { it.viewMode == AzkarReaderViewMode.List }
+        awaitSnapshot("generic") { it.viewMode == AzkarReaderViewMode.List }
 
         recreateReader()
 
@@ -431,7 +506,7 @@ class AzkarReaderPersistenceInstrumentedTest {
     fun dailyDateIsolationUsesInjectedProvider() {
         setReader()
         clickCount("one")
-        awaitSnapshot { it.progressById["one"] == 1 }
+        awaitSnapshot("generic") { it.progressById["one"] == 1 }
 
         dateProvider.date = LocalDate.of(2026, 9, 30)
         recreateReader()
