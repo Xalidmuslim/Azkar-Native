@@ -6,7 +6,6 @@ import android.os.SystemClock
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -165,7 +164,7 @@ class AzkarPhase5ProductionContentScreenshotTest {
         composeRule.waitForIdle()
         composeRule.runOnIdle(configure)
         composeRule.waitForIdle()
-        composeRule.onNodeWithText(focusText, substring = substring).assertExists()
+        composeRule.onNodeWithText(focusText, substring = substring).fetchSemanticsNode()
         saveScreenshot(captureAfterPresentedFrame(), fileName)
     }
 

@@ -3,10 +3,10 @@ package app.xalidmuslim.azkar.ui.reading
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,8 +45,12 @@ class AzkarPhase5ProductionContentInstrumentedTest {
     fun morningContentsHas14Rows() {
         setReader()
         openContents()
-        composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + 13).assertExists()
-        composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + 14).assertDoesNotExist()
+        composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + 13).fetchSemanticsNode()
+        assertTrue(
+            composeRule.onAllNodesWithTag(AzkarSheetTestTags.ContentsItemPrefix + 14)
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
     }
 
     @Test
@@ -61,29 +65,41 @@ class AzkarPhase5ProductionContentInstrumentedTest {
     fun eveningContentsHas13Rows() {
         setReader(AzkarPeriod.Evening)
         openContents()
-        composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + 12).assertExists()
-        composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + 13).assertDoesNotExist()
+        composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + 12).fetchSemanticsNode()
+        assertTrue(
+            composeRule.onAllNodesWithTag(AzkarSheetTestTags.ContentsItemPrefix + 13)
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
     }
 
     @Test
     fun eveningContainsBaqarahLastTwo() {
         setReader(AzkarPeriod.Evening)
         openContents()
-        composeRule.onNodeWithText("Последние два аята Аль-Бакара").assertExists()
+        composeRule.onNodeWithText("Последние два аята Аль-Бакара").fetchSemanticsNode()
     }
 
     @Test
     fun morningDoesNotContainBaqarahLastTwo() {
         setReader()
         openContents()
-        composeRule.onNodeWithText("Последние два аята Аль-Бакара").assertDoesNotExist()
+        assertTrue(
+            composeRule.onAllNodesWithText("Последние два аята Аль-Бакара")
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
     }
 
     @Test
     fun eveningDoesNotContainTahlilHundred() {
         setReader(AzkarPeriod.Evening)
         openContents()
-        composeRule.onNodeWithText("Тахлиль — 100 раз в начале дня").assertDoesNotExist()
+        assertTrue(
+            composeRule.onAllNodesWithText("Тахлиль — 100 раз в начале дня")
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
     }
 
     @Test
@@ -94,7 +110,7 @@ class AzkarPhase5ProductionContentInstrumentedTest {
                 AzkarCatalog.itemsFor(AzkarPeriod.Morning).indexOfFirst { it.id == "kingdom" },
             )
         }
-        composeRule.onNodeWithText("благе этого дня", substring = true).assertExists()
+        composeRule.onNodeWithText("благе этого дня", substring = true).fetchSemanticsNode()
 
         switchEvening()
         composeRule.runOnIdle {
@@ -102,7 +118,7 @@ class AzkarPhase5ProductionContentInstrumentedTest {
                 AzkarCatalog.itemsFor(AzkarPeriod.Evening).indexOfFirst { it.id == "kingdom" },
             )
         }
-        composeRule.onNodeWithText("благе этой ночи", substring = true).assertExists()
+        composeRule.onNodeWithText("благе этой ночи", substring = true).fetchSemanticsNode()
     }
 
     @Test
@@ -113,7 +129,7 @@ class AzkarPhase5ProductionContentInstrumentedTest {
                 AzkarCatalog.itemsFor(AzkarPeriod.Morning).indexOfFirst { it.id == "by-you" },
             )
         }
-        composeRule.onNodeWithText("к Тебе — возвращение", substring = true).assertExists()
+        composeRule.onNodeWithText("к Тебе — возвращение", substring = true).fetchSemanticsNode()
 
         switchEvening()
         composeRule.runOnIdle {
@@ -121,7 +137,7 @@ class AzkarPhase5ProductionContentInstrumentedTest {
                 AzkarCatalog.itemsFor(AzkarPeriod.Evening).indexOfFirst { it.id == "by-you" },
             )
         }
-        composeRule.onNodeWithText("к Тебе — воскресение", substring = true).assertExists()
+        composeRule.onNodeWithText("к Тебе — воскресение", substring = true).fetchSemanticsNode()
     }
 
     @Test
@@ -148,7 +164,11 @@ class AzkarPhase5ProductionContentInstrumentedTest {
         }
         switchEvening()
         composeRule.runOnIdle { assertFalse(uiController.state.settings.showTranslation) }
-        composeRule.onNodeWithTag(AzkarReadingTestTags.Translation).assertDoesNotExist()
+        assertTrue(
+            composeRule.onAllNodesWithTag(AzkarReadingTestTags.Translation)
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
     }
 
     @Test
@@ -160,7 +180,7 @@ class AzkarPhase5ProductionContentInstrumentedTest {
         composeRule.runOnIdle { assertEquals(AzkarReaderViewMode.List, uiController.state.viewMode) }
         composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
         composeRule.onNodeWithTag(AzkarReadingTestTags.ListCardPrefix + "sayyid-istighfar")
-            .assertExists()
+            .fetchSemanticsNode()
     }
 
     @Test
@@ -170,7 +190,7 @@ class AzkarPhase5ProductionContentInstrumentedTest {
         composeRule.waitForIdle()
         switchEvening()
         composeRule.runOnIdle { assertEquals(1, uiController.currentCount("sayyid-istighfar")) }
-        composeRule.onNodeWithText("Выполнено").assertExists()
+        composeRule.onNodeWithText("Выполнено").fetchSemanticsNode()
     }
 
     @Test
@@ -224,7 +244,11 @@ class AzkarPhase5ProductionContentInstrumentedTest {
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         device.pressBack()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(AzkarSheetTestTags.Contents).assertDoesNotExist()
+        assertTrue(
+            composeRule.onAllNodesWithTag(AzkarSheetTestTags.Contents)
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
         composeRule.runOnIdle { assertEquals(2, periodController.navigation.state.activeIndex) }
 
         device.pressBack()
@@ -244,8 +268,8 @@ class AzkarPhase5ProductionContentInstrumentedTest {
             .performScrollTo()
             .performClick()
         composeRule.onNodeWithTag(AzkarSheetTestTags.Explanation).assertIsDisplayed()
-        composeRule.onNodeWithText("Прибегаю к совершенным словам Аллаха").assertExists()
-        composeRule.onNodeWithText("Связанный случай").assertExists()
+        composeRule.onNodeWithText("Прибегаю к совершенным словам Аллаха").fetchSemanticsNode()
+        composeRule.onNodeWithText("Связанный случай").fetchSemanticsNode()
     }
 
     @Test
