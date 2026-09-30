@@ -249,7 +249,15 @@ class AzkarReaderPersistenceInstrumentedTest {
         composeRule.waitUntil(timeoutMillis = 5_000) {
             renderedGeneration == expectedGeneration &&
                 ::readerUi.isInitialized &&
-                readerUi.state.isHydrated
+                readerUi.state.isHydrated &&
+                runCatching {
+                    val tag = if (readerUi.state.viewMode == AzkarReaderViewMode.List) {
+                        AzkarReadingTestTags.List
+                    } else {
+                        AzkarReadingTestTags.Card
+                    }
+                    composeRule.onNodeWithTag(tag).fetchSemanticsNode()
+                }.isSuccess
         }
         composeRule.waitForIdle()
     }
@@ -289,7 +297,13 @@ class AzkarReaderPersistenceInstrumentedTest {
     }
 
     private fun clickCount(id: String) {
-        composeRule.onNodeWithTag(AzkarReadingTestTags.CountActionPrefix + id)
+        val tag = AzkarReadingTestTags.CountActionPrefix + id
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                composeRule.onNodeWithTag(tag).fetchSemanticsNode()
+            }.isSuccess
+        }
+        composeRule.onNodeWithTag(tag)
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
@@ -455,6 +469,7 @@ class AzkarReaderPersistenceInstrumentedTest {
 
         Log.i("AzkarPhase4Reset", "tap Reset begin")
         composeRule.onNodeWithTag(AzkarReadingTestTags.ResetProgress)
+            .performScrollTo()
             .assertIsDisplayed()
             .performClick()
         composeRule.waitForIdle()
