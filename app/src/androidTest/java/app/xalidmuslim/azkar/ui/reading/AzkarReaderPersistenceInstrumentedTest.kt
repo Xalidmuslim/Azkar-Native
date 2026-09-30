@@ -71,6 +71,43 @@ class AzkarReaderPersistenceInstrumentedTest {
     private var renderedGeneration: Int = -1
 
 
+    // Test-only synchronization: completion means the delegated DataStore increment write returned.
+    private class IncrementTracingRepository(
+        private val delegate: DataStoreAzkarPreferencesRepository,
+    ) : AzkarPreferencesRepository {
+        val incrementWriteCompleted = CompletableDeferred<Triple<LocalDate, String, Int>>()
+
+        override fun observeSnapshot(
+            date: LocalDate,
+            visibleItemIds: Set<String>,
+        ): Flow<AzkarPreferencesSnapshot> = delegate.observeSnapshot(date, visibleItemIds)
+
+        override suspend fun saveSettings(settings: AzkarReaderSettings) {
+            delegate.saveSettings(settings)
+        }
+
+        override suspend fun saveViewMode(viewMode: AzkarReaderViewMode) {
+            delegate.saveViewMode(viewMode)
+        }
+
+        override suspend fun incrementProgress(
+            date: LocalDate,
+            stableDhikrId: String,
+            target: Int,
+        ): Int {
+            val persistedCount = delegate.incrementProgress(date, stableDhikrId, target)
+            incrementWriteCompleted.complete(Triple(date, stableDhikrId, persistedCount))
+            return persistedCount
+        }
+
+        override suspend fun resetProgress(
+            date: LocalDate,
+            visibleItemIds: Set<String>,
+        ) {
+            delegate.resetProgress(date, visibleItemIds)
+        }
+    }
+
     // Test-only synchronization: completion means the delegated DataStore reset write returned.
     private class ResetTracingRepository(
         private val delegate: DataStoreAzkarPreferencesRepository,
@@ -607,14 +644,39 @@ class AzkarReaderPersistenceInstrumentedTest {
 
     @Test
     fun dailyDateIsolationUsesInjectedProvider() {
+        val day1 = LocalDate.of(2026, 9, 29)
+        val day2 = LocalDate.of(2026, 9, 30)
+        val tracingRepository = IncrementTracingRepository(backingRepository)
+        repository = tracingRepository
+
         setReader()
         clickCount("one")
-        awaitSnapshot("generic") { it.progressById["one"] == 1 }
 
-        dateProvider.date = LocalDate.of(2026, 9, 30)
+        composeRule.runOnIdle {
+            assertEquals(1, readerUi.currentCount("one"))
+        }
+
+        val completedWrite = runBlocking {
+            withTimeout(5_000) {
+                tracingRepository.incrementWriteCompleted.await()
+            }
+        }
+        assertEquals(day1, completedWrite.first)
+        assertEquals("one", completedWrite.second)
+        assertEquals(1, completedWrite.third)
+
+        val day1Snapshot = currentSnapshot("day1-written")
+        assertEquals(1, day1Snapshot.progressById["one"])
+
+        dateProvider.date = day2
         recreateReader()
 
-        composeRule.runOnIdle { assertEquals(0, readerUi.currentCount("one")) }
+        composeRule.runOnIdle {
+            assertEquals(0, readerUi.currentCount("one"))
+        }
         composeRule.onNodeWithText("0 / 1").assertIsDisplayed()
+
+        val day2Snapshot = currentSnapshot("day2-hydrated")
+        assertEquals(0, day2Snapshot.progressById["one"])
     }
 }
