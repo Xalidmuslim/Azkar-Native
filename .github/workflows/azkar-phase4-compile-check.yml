@@ -1,0 +1,27 @@
+name: Azkar Phase 4 Compile Check
+
+on:
+  push:
+    branches:
+      - azkar-native-phase4-compile-check-2026-09-30
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Compile Debug Android Test Kotlin
+        run: ./gradlew :app:compileDebugAndroidTestKotlin --stacktrace
