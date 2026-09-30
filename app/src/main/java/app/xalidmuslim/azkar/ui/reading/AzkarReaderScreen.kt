@@ -39,6 +39,7 @@ fun AzkarReaderScreen(
     period: AzkarPeriod,
     modifier: Modifier = Modifier,
     initialIndex: Int = 0,
+    onPeriodChange: (AzkarPeriod) -> Unit = {},
 ) {
     val navigationController = remember(entries.size, initialIndex) {
         AzkarReaderNavigationController(entries.size, initialIndex)
@@ -50,6 +51,7 @@ fun AzkarReaderScreen(
         controller = navigationController,
         uiController = uiController,
         modifier = modifier,
+        onPeriodChange = onPeriodChange,
     )
 }
 
@@ -61,6 +63,7 @@ fun AzkarReaderScreen(
     dateProvider: AzkarDateProvider = SystemAzkarDateProvider,
     modifier: Modifier = Modifier,
     initialIndex: Int = 0,
+    onPeriodChange: (AzkarPeriod) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val visibleItemIds = remember(entries) { entries.map { it.item.id }.toSet() }
@@ -81,6 +84,7 @@ fun AzkarReaderScreen(
         controller = navigationController,
         uiController = uiController,
         modifier = modifier,
+        onPeriodChange = onPeriodChange,
     )
 }
 
@@ -91,6 +95,7 @@ fun AzkarReaderScreen(
     controller: AzkarReaderNavigationController,
     modifier: Modifier = Modifier,
     uiController: AzkarReaderUiController? = null,
+    onPeriodChange: (AzkarPeriod) -> Unit = {},
 ) {
     require(entries.isNotEmpty()) { "Reader requires at least one entry" }
 
@@ -270,6 +275,7 @@ fun AzkarReaderScreen(
                         onResetProgress = {
                             resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
                         },
+                        onPeriodChange = onPeriodChange,
                         compactReader = settings.readerStyle == AzkarReaderStyle.Compact,
                         showTranslation = settings.showTranslation,
                         showSources = settings.showSources,
@@ -293,6 +299,7 @@ fun AzkarReaderScreen(
                         onResetProgress = {
                             resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
                         },
+                        onPeriodChange = onPeriodChange,
                         onOpenExplanation = { index, itemId ->
                             controller.selectAnchor(index)
                             resolvedUiController.openExplanation(itemId)
