@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,9 +42,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,6 +60,7 @@ import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarElevation
 import app.xalidmuslim.azkar.ui.designsystem.AzkarFontFamilies
 import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
+import app.xalidmuslim.azkar.ui.designsystem.AzkarOutlineButton
 import app.xalidmuslim.azkar.ui.designsystem.AzkarRadius
 import app.xalidmuslim.azkar.ui.designsystem.AzkarSpacing
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
@@ -88,9 +93,11 @@ internal fun AzkarReaderSheetHost(
     entries: List<AzkarReaderEntry>,
     activeIndex: Int,
     selectedExplanationId: String?,
+    selectedActionId: String?,
     settings: AzkarReaderSettings,
     viewMode: AzkarReaderViewMode,
     onDismiss: () -> Unit,
+    onResetSettings: () -> Unit,
     onSelectContents: (Int) -> Unit,
     onViewModeChange: (AzkarReaderViewMode) -> Unit,
     onUpdateSettings: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
@@ -119,6 +126,7 @@ internal fun AzkarReaderSheetHost(
                 settings = settings,
                 onDismiss = onDismiss,
                 onUpdateSettings = onUpdateSettings,
+                onResetSettings = onResetSettings,
             )
             AzkarReaderSheet.Contents -> AzkarContentsSheet(
                 entries = entries,
@@ -133,6 +141,14 @@ internal fun AzkarReaderSheetHost(
                     ?: entries.getOrNull(activeIndex)?.item
                 if (item != null) {
                     AzkarExplanationSheet(item = item, onDismiss = onDismiss)
+                }
+            }
+            AzkarReaderSheet.SourceInfo -> AzkarSourceInfoSheet(onDismiss = onDismiss)
+            AzkarReaderSheet.Actions -> {
+                val item = entries.firstOrNull { it.item.id == selectedActionId }?.item
+                    ?: entries.getOrNull(activeIndex)?.item
+                if (item != null) {
+                    AzkarActionsSheet(item = item, onDismiss = onDismiss)
                 }
             }
             AzkarReaderSheet.None -> Unit
@@ -209,10 +225,12 @@ private fun AzkarBottomSheet(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    BasicText(
-                        text = eyebrow.uppercase(),
-                        style = AzkarThemeValues.typography.sheetEyebrow.copy(color = colors.primary),
-                    )
+                    if (eyebrow.isNotBlank()) {
+                        BasicText(
+                            text = eyebrow.uppercase(),
+                            style = AzkarThemeValues.typography.sheetEyebrow.copy(color = colors.primary),
+                        )
+                    }
                     BasicText(
                         text = title,
                         style = AzkarThemeValues.typography.sheetTitle.copy(color = colors.foreground),
@@ -468,14 +486,98 @@ private fun AzkarInsightSection(
 }
 
 @Composable
+private fun AzkarSourceInfoSheet(onDismiss: () -> Unit) {
+    val colors = AzkarThemeValues.colors
+    AzkarBottomSheet(
+        title = "Источник списка",
+        eyebrow = "",
+        subtitle = "Основа подборки и принцип отображения оценок",
+        maxHeightFraction = 0.56f,
+        specificTestTag = "azkar-source-info-sheet",
+        onDismiss = onDismiss,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = AzkarSpacing.insightBodyHorizontal,
+                    end = AzkarSpacing.insightBodyHorizontal,
+                    bottom = AzkarSpacing.insightBodyBottomBase,
+                ),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            BasicText(
+                text = "Основа списка — Абдуль-Азиз ат-Тарифи, «Утренние и вечерние азкары: передача и исследование».",
+                style = AzkarThemeValues.typography.insightBody.copy(color = colors.foreground),
+            )
+            BasicText(
+                text = "Спорные оценки отмечены отдельно; подробности вынесены в примечания и разъяснения.",
+                style = AzkarThemeValues.typography.sheetSubtitle.copy(color = colors.muted),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AzkarActionsSheet(
+    item: AzkarReadingItem,
+    onDismiss: () -> Unit,
+) {
+    val clipboard = LocalClipboardManager.current
+    AzkarBottomSheet(
+        title = "Ещё",
+        eyebrow = "",
+        subtitle = item.title,
+        maxHeightFraction = 0.62f,
+        specificTestTag = "azkar-actions-sheet",
+        onDismiss = onDismiss,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = AzkarSpacing.settingsBodyHorizontal,
+                    end = AzkarSpacing.settingsBodyHorizontal,
+                    bottom = AzkarSpacing.settingsBodyBottomBase,
+                ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AzkarOutlineButton(
+                text = "Копировать арабский текст",
+                onClick = {
+                    clipboard.setText(AnnotatedString(item.arabic))
+                    onDismiss()
+                },
+            )
+            AzkarOutlineButton(
+                text = "Копировать перевод",
+                onClick = {
+                    clipboard.setText(AnnotatedString(item.translation))
+                    onDismiss()
+                },
+            )
+            AzkarOutlineButton(
+                text = "Копировать источник",
+                onClick = {
+                    clipboard.setText(AnnotatedString(item.source))
+                    onDismiss()
+                },
+            )
+        }
+    }
+}
+
+@Composable
 private fun AzkarSettingsSheet(
     settings: AzkarReaderSettings,
     onDismiss: () -> Unit,
     onUpdateSettings: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
+    onResetSettings: () -> Unit,
 ) {
     AzkarBottomSheet(
         title = "Настройки чтения",
-        eyebrow = "Настройки",
+        eyebrow = "",
         subtitle = "Изменения применяются сразу",
         maxHeightFraction = AzkarDimensions.settingsSheetMaxHeightFraction,
         specificTestTag = AzkarSheetTestTags.Settings,
@@ -485,21 +587,40 @@ private fun AzkarSettingsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                .padding(
+                .fillMaxHeight(),
+        ) {
+            Box(
+                modifier = Modifier.padding(
                     start = AzkarSpacing.settingsBodyHorizontal,
                     end = AzkarSpacing.settingsBodyHorizontal,
-                    bottom = AzkarSpacing.settingsBodyBottomBase,
+                    bottom = AzkarSpacing.settingsBodyGap,
                 ),
-            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.settingsBodyGap),
-        ) {
-            AzkarSettingsPreview(settings)
-            AzkarFontSettings(settings, onUpdateSettings)
-            AzkarSizeSettings(settings, onUpdateSettings)
-            AzkarStyleSettings(settings, onUpdateSettings)
-            AzkarVisibilitySettings(settings, onUpdateSettings)
-            AzkarThemeSettings(settings, onUpdateSettings)
+            ) {
+                AzkarSettingsPreview(settings)
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                    .padding(
+                        start = AzkarSpacing.settingsBodyHorizontal,
+                        end = AzkarSpacing.settingsBodyHorizontal,
+                        bottom = AzkarSpacing.settingsBodyBottomBase,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(AzkarSpacing.settingsBodyGap),
+            ) {
+                AzkarFontSettings(settings, onUpdateSettings)
+                AzkarSizeSettings(settings, onUpdateSettings)
+                AzkarStyleSettings(settings, onUpdateSettings)
+                AzkarVisibilitySettings(settings, onUpdateSettings)
+                AzkarReadingBehaviorSettings(settings, onUpdateSettings)
+                AzkarThemeSettings(settings, onUpdateSettings)
+                AzkarOutlineButton(
+                    text = "По умолчанию",
+                    onClick = onResetSettings,
+                )
+            }
         }
     }
 }
@@ -550,11 +671,9 @@ private fun AzkarFontSettings(
             RussianFontFamily.PT_SERIF to "Классика",
             RussianFontFamily.INTER to "Современный",
             RussianFontFamily.MANROPE to "Компактный",
-            RussianFontFamily.ANDROID_SANS to "Android Sans",
-            RussianFontFamily.ANDROID_SERIF to "Android Serif",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
-            options.chunked(3).forEach { row ->
+            options.chunked(2).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
                     row.forEach { (font, label) ->
                         AzkarFontTile(
@@ -566,7 +685,7 @@ private fun AzkarFontSettings(
                             onClick = { update { it.copy(russianFontFamily = font) } },
                         )
                     }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
@@ -585,7 +704,7 @@ private fun AzkarFontSettings(
                     row.forEach { (font, label) ->
                         AzkarFontTile(
                             title = label,
-                            sample = "الذِّكْر",
+                            sample = "سُبْحَانَ اللَّهِ",
                             active = settings.arabicFontFamily == font,
                             modifier = Modifier.weight(1f),
                             fontFamily = AzkarFontFamilies.arabic(font),
@@ -610,12 +729,12 @@ private fun AzkarFontTile(
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.fontTile)
     val backgroundColor = animateColorAsState(
-        targetValue = if (active) colors.activeItemBackground else colors.card,
+        targetValue = if (active) colors.activeItemBackground else colors.surface,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "font-tile-background",
     ).value
     val borderColor = animateColorAsState(
-        targetValue = if (active) colors.primary else colors.border,
+        targetValue = if (active) colors.primary else Color.Transparent,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "font-tile-border",
     ).value
@@ -704,8 +823,7 @@ private fun AzkarValueControl(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(colors.card)
-            .border(AzkarBorders.thin, colors.border, shape)
+            .background(colors.surface)
             .padding(
                 horizontal = AzkarSpacing.controlHorizontal,
                 vertical = AzkarSpacing.controlVertical,
@@ -841,12 +959,12 @@ private fun AzkarToggleTile(
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.toggleItem)
     val backgroundColor = animateColorAsState(
-        targetValue = if (checked) colors.activeItemBackground else colors.card,
+        targetValue = if (checked) colors.activeItemBackground else colors.surface,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "toggle-background",
     ).value
     val borderColor = animateColorAsState(
-        targetValue = if (checked) colors.primary else colors.border,
+        targetValue = if (checked) colors.primary else Color.Transparent,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "toggle-border",
     ).value
@@ -873,6 +991,21 @@ private fun AzkarToggleTile(
         BasicText(
             text = text,
             style = AzkarThemeValues.typography.toggleText.copy(color = colors.foreground),
+        )
+    }
+}
+
+@Composable
+private fun AzkarReadingBehaviorSettings(
+    settings: AzkarReaderSettings,
+    update: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
+) {
+    AzkarSettingsSection("Навигация") {
+        AzkarToggleTile(
+            text = "Скрывать выполненные",
+            checked = settings.hideCompleted,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { update { it.copy(hideCompleted = !it.hideCompleted) } },
         )
     }
 }
@@ -931,12 +1064,12 @@ private fun AzkarChoiceTile(
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.themeRow)
     val backgroundColor = animateColorAsState(
-        targetValue = if (active) colors.activeItemBackground else colors.card,
+        targetValue = if (active) colors.activeItemBackground else colors.surface,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "choice-background",
     ).value
     val borderColor = animateColorAsState(
-        targetValue = if (active) colors.primary else colors.border,
+        targetValue = if (active) colors.primary else Color.Transparent,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "choice-border",
     ).value
