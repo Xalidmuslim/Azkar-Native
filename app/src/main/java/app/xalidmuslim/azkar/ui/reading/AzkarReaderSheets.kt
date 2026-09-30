@@ -353,6 +353,20 @@ private fun AzkarExplanationSheet(
     onDismiss: () -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
+    val explanation = item.explanation
+    val meaning = explanation?.meaning?.takeIf { it.isNotBlank() } ?: item.translation
+    val relatedReport = explanation?.relatedReport?.takeIf { it.isNotBlank() }
+    val scholarNotes = buildList {
+        explanation?.scholarNotes
+            ?.filter { it.isNotBlank() }
+            ?.let(::addAll)
+        item.note?.takeIf { it.isNotBlank() }?.let(::add)
+    }.distinct()
+    val references = explanation?.references
+        ?.filter { it.isNotBlank() }
+        ?.ifEmpty { null }
+        ?: listOf(item.source).filter { it.isNotBlank() }
+
     AzkarBottomSheet(
         title = item.title,
         eyebrow = "Разъяснение",
@@ -373,25 +387,45 @@ private fun AzkarExplanationSheet(
                 ),
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.insightBodyGap),
         ) {
-            AzkarInsightSection("Смысл") {
-                BasicText(
-                    text = item.translation,
-                    style = AzkarThemeValues.typography.insightBody.copy(color = colors.foreground),
-                )
-            }
-            item.note?.let { note ->
-                AzkarInsightSection("Примечания учёных") {
+            if (meaning.isNotBlank()) {
+                AzkarInsightSection("Смысл") {
                     BasicText(
-                        text = note,
-                        style = AzkarThemeValues.typography.insightBody.copy(color = colors.foreground),
+                        text = meaning,
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
                     )
                 }
             }
-            AzkarInsightSection("Источники разбора") {
-                BasicText(
-                    text = item.source,
-                    style = AzkarThemeValues.typography.insightReferences.copy(color = colors.muted),
-                )
+            relatedReport?.let { report ->
+                AzkarInsightSection("Связанный случай") {
+                    BasicText(
+                        text = report,
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
+            if (scholarNotes.isNotEmpty()) {
+                AzkarInsightSection("Примечания учёных") {
+                    BasicText(
+                        text = scholarNotes.joinToString("\n\n"),
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
+            if (references.isNotEmpty()) {
+                AzkarInsightSection("Источники разбора") {
+                    BasicText(
+                        text = references.joinToString("\n"),
+                        style = AzkarThemeValues.typography.insightReferences.copy(
+                            color = colors.muted,
+                        ),
+                    )
+                }
             }
         }
     }
