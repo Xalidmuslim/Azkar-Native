@@ -1,5 +1,6 @@
 package app.xalidmuslim.azkar.persistence
 
+import app.xalidmuslim.azkar.content.AzkarPeriod
 import app.xalidmuslim.azkar.ui.reading.AzkarReaderSettings
 import app.xalidmuslim.azkar.ui.reading.AzkarReaderViewMode
 import java.time.LocalDate
@@ -9,6 +10,8 @@ data class AzkarPreferencesSnapshot(
     val settings: AzkarReaderSettings = AzkarReaderSettings(),
     val viewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
     val progressById: Map<String, Int> = emptyMap(),
+    val lastPeriod: AzkarPeriod = AzkarPeriod.Morning,
+    val lastItemByPeriod: Map<AzkarPeriod, String> = emptyMap(),
 )
 
 interface AzkarPreferencesRepository {
@@ -19,6 +22,8 @@ interface AzkarPreferencesRepository {
 
     suspend fun saveSettings(settings: AzkarReaderSettings)
     suspend fun saveViewMode(viewMode: AzkarReaderViewMode)
+    suspend fun saveLastPeriod(period: AzkarPeriod)
+    suspend fun saveLastItem(period: AzkarPeriod, stableDhikrId: String)
 
     suspend fun incrementProgress(
         date: LocalDate,
