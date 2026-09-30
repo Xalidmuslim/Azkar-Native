@@ -792,7 +792,7 @@ private fun AzkarFontSettings(
     AzkarSettingsSection("Арабский шрифт") {
         val options = listOf(
             ArabicFontFamily.NOTO_NASKH_ARABIC to "Чёткий",
-            ArabicFontFamily.NOTO_SANS_ARABIC to "Куфи",
+            ArabicFontFamily.NOTO_SANS_ARABIC to "Мусхаф",
             ArabicFontFamily.AMIRI to "Коранический",
             ArabicFontFamily.SCHEHERAZADE_NEW to "Каллиграфический",
         )

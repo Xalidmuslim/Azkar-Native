@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -322,7 +323,7 @@ fun AzkarReaderScreen(
                         onNext = next,
                         shellScrollState = shellScrollState,
                         readingScrollState = readingScrollState,
-                        readingAreaModifier = transitionModifier,
+                        readingAreaModifier = transitionModifier.systemGestureExclusion(),
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
