@@ -417,6 +417,7 @@ class AzkarReaderPersistenceInstrumentedTest {
 
         Log.i("AzkarPhase4Reset", "tap Reset begin")
         composeRule.onNodeWithTag(AzkarReadingTestTags.ResetProgress)
+            .performScrollTo()
             .assertIsDisplayed()
             .performClick()
         composeRule.waitForIdle()
