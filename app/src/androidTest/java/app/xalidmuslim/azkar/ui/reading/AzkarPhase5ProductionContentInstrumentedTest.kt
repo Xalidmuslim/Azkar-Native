@@ -310,8 +310,20 @@ class AzkarPhase5ProductionContentInstrumentedTest {
         assertEquals(1, renderedTitleNodes.count { isDescendantOf(it, cardNode.id) })
         assertEquals(1, explainNodes.count { isDescendantOf(it, cardNode.id) })
 
+        composeRule.onNodeWithTag(AzkarReadingTestTags.Card, useUnmergedTree = true)
+            .performScrollTo()
         composeRule.onNodeWithTag(AzkarReadingTestTags.Explain, useUnmergedTree = true)
             .performScrollTo()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                composeRule
+                    .onNodeWithTag(AzkarReadingTestTags.Explain, useUnmergedTree = true)
+                    .assertIsDisplayed()
+            }.isSuccess
+        }
+
+        composeRule.onNodeWithTag(AzkarReadingTestTags.Explain, useUnmergedTree = true)
             .assertIsDisplayed()
             .performClick()
 
