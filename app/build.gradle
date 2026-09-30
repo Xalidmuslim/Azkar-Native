@@ -13,13 +13,15 @@ def azkarFontSpecs = [
     [file: 'inter_variable.ttf', path: 'ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf', gitBlobSha: '047c92f6e2212473dc436020afed689527076d44', size: 876576L],
     [file: 'manrope_variable.ttf', path: 'ofl/manrope/Manrope%5Bwght%5D.ttf', gitBlobSha: '75274da58537d6123b14f2cd0c355ad4681fc2b3', size: 164700L],
     [file: 'noto_naskh_arabic_variable.ttf', path: 'ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf', gitBlobSha: 'a8d2867262dc7bb28492ad746de5d56235735c8b', size: 307592L],
-    [file: 'noto_sans_arabic_variable.ttf', path: 'ofl/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf', gitBlobSha: 'f1d01edce4ebaedcbe9a06fc75fec07b304ec3df', size: 844676L],
-    [file: 'amiri_regular.ttf', path: 'ofl/amiri/Amiri-Regular.ttf', gitBlobSha: '14dfa0d6c80db50460d23daa306a7ac92e74676f', size: 431116L],
-    [file: 'amiri_bold.ttf', path: 'ofl/amiri/Amiri-Bold.ttf', gitBlobSha: '017afa9adb8ce417b08796d22d9204569ad211c7', size: 413480L],
-    [file: 'scheherazade_new_regular.ttf', path: 'ofl/scheherazadenew/ScheherazadeNew-Regular.ttf', gitBlobSha: '80e1be589d5d687b0764904bf5a37627587d9bd6', size: 331504L],
-    [file: 'scheherazade_new_medium.ttf', path: 'ofl/scheherazadenew/ScheherazadeNew-Medium.ttf', gitBlobSha: 'e33ce7b15d1b7979f3db2802a0613607d4f39354', size: 582492L],
-    [file: 'scheherazade_new_semibold.ttf', path: 'ofl/scheherazadenew/ScheherazadeNew-SemiBold.ttf', gitBlobSha: 'f7931e17f91613426229962e854c74e75f6a3a35', size: 589896L],
-    [file: 'scheherazade_new_bold.ttf', path: 'ofl/scheherazadenew/ScheherazadeNew-Bold.ttf', gitBlobSha: '2a00cce1d5b318cc7e5e347375a758a862d6e7eb', size: 593472L],
+    [file: 'cairo_variable.ttf', path: 'ofl/cairo/Cairo%5Bslnt%2Cwght%5D.ttf', gitBlobSha: '25641b1c828857698457bcd9f5a102616b4e8033', size: 599548L],
+    [file: 'harmattan_regular.ttf', path: 'ofl/harmattan/Harmattan-Regular.ttf', gitBlobSha: 'e36f9c434160367d89cd83e4c88aca5acdc0ab8d', size: 573500L],
+    [file: 'harmattan_medium.ttf', path: 'ofl/harmattan/Harmattan-Medium.ttf', gitBlobSha: 'dd49083a448107f6317a804e6846718ef274181f', size: 579456L],
+    [file: 'harmattan_semibold.ttf', path: 'ofl/harmattan/Harmattan-SemiBold.ttf', gitBlobSha: '3b085aa2d14fb8ac3177310e3d39510409f70283', size: 561880L],
+    [file: 'harmattan_bold.ttf', path: 'ofl/harmattan/Harmattan-Bold.ttf', gitBlobSha: '30acc1287027373897dc3043c902a2b8bc940680', size: 559624L],
+    [file: 'lateef_regular.ttf', path: 'ofl/lateef/Lateef-Regular.ttf', gitBlobSha: 'a81a714200f8afe903aa0a9b53fd3aed1c700174', size: 241092L],
+    [file: 'lateef_medium.ttf', path: 'ofl/lateef/Lateef-Medium.ttf', gitBlobSha: '145dda0c8695e5c9479b1bb0cdd693c39cca4081', size: 242052L],
+    [file: 'lateef_semibold.ttf', path: 'ofl/lateef/Lateef-SemiBold.ttf', gitBlobSha: 'cb42e6b0ff79da9e6d6bd70a1f36036ece1a559a', size: 242260L],
+    [file: 'lateef_bold.ttf', path: 'ofl/lateef/Lateef-Bold.ttf', gitBlobSha: '894c60c2072c297d57e06441a8bf70c068ed3a3e', size: 243260L],
 ]
 
 def gitBlobSha1 = { File file ->

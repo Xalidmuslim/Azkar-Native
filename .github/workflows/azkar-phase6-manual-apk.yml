@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - azkar-native-phase6-app-integration-2026-09-30
-    paths:
-      - .github/workflows/azkar-phase6-manual-apk.yml
 
 permissions:
   contents: read

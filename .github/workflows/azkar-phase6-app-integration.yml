@@ -1,9 +1,6 @@
 name: Azkar Phase 6 Production App Integration
 
 on:
-  push:
-    branches:
-      - azkar-native-phase6-app-integration-2026-09-30
   workflow_dispatch:
 
 jobs:

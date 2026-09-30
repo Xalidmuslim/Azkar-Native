@@ -152,7 +152,6 @@ private fun AzkarBottomSheet(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.overlay)
             .testTag(AzkarSheetTestTags.Overlay)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.BottomCenter,
@@ -561,9 +560,9 @@ private fun AzkarFontSettings(
     AzkarSettingsSection("Арабский шрифт") {
         val options = listOf(
             ArabicFontFamily.NOTO_NASKH_ARABIC to "Чёткий",
-            ArabicFontFamily.NOTO_SANS_ARABIC to "Очень читаемый",
-            ArabicFontFamily.AMIRI to "Классический",
-            ArabicFontFamily.SCHEHERAZADE_NEW to "Мягкий",
+            ArabicFontFamily.NOTO_SANS_ARABIC to "Современный",
+            ArabicFontFamily.AMIRI to "Традиционный",
+            ArabicFontFamily.SCHEHERAZADE_NEW to "Каллиграфический",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
             options.chunked(2).forEach { row ->
