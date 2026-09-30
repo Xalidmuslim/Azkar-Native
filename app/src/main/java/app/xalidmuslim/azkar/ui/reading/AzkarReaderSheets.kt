@@ -392,12 +392,12 @@ private fun AzkarExplanationSheet(
     val heartFocus = extra.heartFocus?.takeIf { it.isNotBlank() }
     val benefits = extra.benefits.filter { it.isNotBlank() }
     val practicalApplication = extra.practicalApplication?.takeIf { it.isNotBlank() }
+    val itemNote = item.note?.takeIf { it.isNotBlank() }
     val scholarNotes = buildList {
         explanation?.scholarNotes
             ?.filter { it.isNotBlank() }
             ?.let(::addAll)
         extra.scholarNotes.filter { it.isNotBlank() }.let(::addAll)
-        item.note?.takeIf { it.isNotBlank() }?.let(::add)
     }.distinct()
     val references = buildList {
         explanation?.references?.filter { it.isNotBlank() }?.let(::addAll)
@@ -459,6 +459,16 @@ private fun AzkarExplanationSheet(
                 AzkarInsightSection("Связанный хадис или случай") {
                     BasicText(
                         text = report,
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
+            itemNote?.let { note ->
+                AzkarInsightSection("Примечание") {
+                    BasicText(
+                        text = note,
                         style = AzkarThemeValues.typography.insightBody.copy(
                             color = colors.foreground,
                         ),
