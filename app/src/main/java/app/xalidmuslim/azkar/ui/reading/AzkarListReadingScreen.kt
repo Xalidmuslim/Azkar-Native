@@ -41,6 +41,7 @@ internal fun AzkarListReadingScreen(
     onOpenContents: () -> Unit,
     onIncrementCount: (String, Int) -> Unit,
     onResetProgress: () -> Unit,
+    onPeriodChange: (AzkarPeriod) -> Unit = {},
     onOpenExplanation: (Int, String) -> Unit,
 ) {
     val selected = entries[activeIndex.coerceIn(entries.indices)]
@@ -77,7 +78,7 @@ internal fun AzkarListReadingScreen(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         AzkarHeader(onOpenSettings)
                         AzkarSourceNote()
-                        AzkarPeriodTabs(period)
+                        AzkarPeriodTabs(period, onPeriodChange)
                         AzkarProgressCard(summaryState, onResetProgress)
                     }
                 }
