@@ -216,9 +216,7 @@ class AzkarPhase6AppIntegrationInstrumentedTest {
 
     @Test
     fun androidBackClosesSheetBeforeReaderHistory() {
-        composeRule.onNodeWithTag(AzkarReadingTestTags.Next)
-            .assertIsDisplayed()
-            .performClick()
+        clickDisplayedTag(AzkarReadingTestTags.Next)
         waitForText("2 из 14")
 
         openSettings()
@@ -236,11 +234,12 @@ class AzkarPhase6AppIntegrationInstrumentedTest {
 
     @Test
     fun standardAndroidBackFinishesActivityAtRoot() {
+        val activity = composeRule.activity
         composeRule.runOnIdle {
-            composeRule.activity.onBackPressedDispatcher.onBackPressed()
+            activity.onBackPressedDispatcher.onBackPressed()
         }
-        SystemClock.sleep(150)
-        assertTrue(composeRule.activity.isFinishing || composeRule.activity.isDestroyed)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        assertTrue(activity.isFinishing || activity.isDestroyed)
     }
 
     @Test
@@ -273,17 +272,11 @@ class AzkarPhase6AppIntegrationInstrumentedTest {
     }
 
     private fun openContents() {
-        composeRule.onNodeWithTag(AzkarReadingTestTags.OpenContents)
-            .assertIsDisplayed()
-            .performClick()
-        composeRule.waitForIdle()
+        clickDisplayedTag(AzkarReadingTestTags.OpenContents)
     }
 
     private fun openSettings() {
-        composeRule.onNodeWithTag(AzkarReadingTestTags.OpenSettingsTop)
-            .assertIsDisplayed()
-            .performClick()
-        composeRule.waitForIdle()
+        clickDisplayedTag(AzkarReadingTestTags.OpenSettingsTop)
     }
 
     private fun openFirstAvailableExplanation() {
@@ -293,53 +286,91 @@ class AzkarPhase6AppIntegrationInstrumentedTest {
 
         if (index != 0) {
             openContents()
+            awaitComposeSemantics {
+                composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + index)
+                    .assertIsDisplayed()
+            }
             composeRule.onNodeWithTag(AzkarSheetTestTags.ContentsItemPrefix + index)
                 .performClick()
             composeRule.waitForIdle()
         }
 
+        awaitComposeSemantics {
+            composeRule.onNodeWithTag(AzkarReadingTestTags.Explain)
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
         composeRule.onNodeWithTag(AzkarReadingTestTags.Explain)
-            .performScrollTo()
-            .assertIsDisplayed()
             .performClick()
         composeRule.waitForIdle()
     }
 
     private fun clickCount(id: String) {
-        composeRule.onNodeWithTag(AzkarReadingTestTags.CountActionPrefix + id)
-            .performScrollTo()
-            .assertIsDisplayed()
-            .performClick()
+        val tag = AzkarReadingTestTags.CountActionPrefix + id
+        awaitComposeSemantics {
+            composeRule.onNodeWithTag(tag)
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
+        composeRule.onNodeWithTag(tag).performClick()
+        composeRule.waitForIdle()
+    }
+
+    private fun clickDisplayedTag(tag: String) {
+        awaitComposeSemantics {
+            composeRule.onNodeWithTag(tag).assertIsDisplayed()
+        }
+        composeRule.onNodeWithTag(tag).performClick()
         composeRule.waitForIdle()
     }
 
     private fun waitForCards() {
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            runCatching {
-                composeRule.onNodeWithTag(AzkarReadingTestTags.Card)
-                    .fetchSemanticsNode()
-            }.isSuccess
+        awaitComposeSemantics {
+            composeRule.onNodeWithTag(AzkarReadingTestTags.Card)
+                .assertIsDisplayed()
         }
-        composeRule.waitForIdle()
     }
 
     private fun waitForList() {
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            runCatching {
-                composeRule.onNodeWithTag(AzkarReadingTestTags.List)
-                    .fetchSemanticsNode()
-            }.isSuccess
+        awaitComposeSemantics {
+            composeRule.onNodeWithTag(AzkarReadingTestTags.List)
+                .assertIsDisplayed()
         }
-        composeRule.waitForIdle()
     }
 
     private fun waitForText(text: String) {
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            composeRule.onAllNodesWithText(text)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
+        awaitComposeSemantics {
+            assertTrue(
+                composeRule.onAllNodesWithText(text)
+                    .fetchSemanticsNodes()
+                    .isNotEmpty(),
+            )
         }
-        composeRule.waitForIdle()
+    }
+
+    private fun awaitComposeSemantics(
+        timeoutMillis: Long = 10_000,
+        assertion: () -> Unit,
+    ) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
+        var lastFailure: Throwable? = null
+
+        do {
+            composeRule.waitForIdle()
+            val result = runCatching(assertion)
+            if (result.isSuccess) {
+                composeRule.waitForIdle()
+                return
+            }
+            lastFailure = result.exceptionOrNull()
+            instrumentation.waitForIdleSync()
+        } while (SystemClock.uptimeMillis() < deadline)
+
+        throw AssertionError(
+            "Compose semantics condition was not satisfied within $timeoutMillis ms",
+            lastFailure,
+        )
     }
 
     private fun awaitSnapshot(
