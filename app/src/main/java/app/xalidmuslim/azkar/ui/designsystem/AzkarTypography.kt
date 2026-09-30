@@ -37,12 +37,12 @@ object AzkarFontFamilies {
     val Inter = variableFamily(R.font.inter_variable)
     val Manrope = variableFamily(R.font.manrope_variable)
     val NotoNaskhArabic = variableFamily(R.font.noto_naskh_arabic_variable)
-    val Cairo = variableFamily(R.font.cairo_variable)
-    val Harmattan = FontFamily(
-        Font(R.font.harmattan_regular, weight = FontWeight.Normal),
-        Font(R.font.harmattan_medium, weight = FontWeight.Medium),
-        Font(R.font.harmattan_semibold, weight = FontWeight.SemiBold),
-        Font(R.font.harmattan_bold, weight = FontWeight.Bold),
+    val NotoKufiArabic = variableFamily(R.font.noto_kufi_arabic_variable)
+    val AmiriQuran = FontFamily(
+        Font(R.font.amiri_quran_regular, weight = FontWeight.Normal),
+        Font(R.font.amiri_quran_regular, weight = FontWeight.Medium),
+        Font(R.font.amiri_quran_regular, weight = FontWeight.SemiBold),
+        Font(R.font.amiri_quran_regular, weight = FontWeight.Bold),
     )
     val Lateef = FontFamily(
         Font(R.font.lateef_regular, weight = FontWeight.Normal),
@@ -62,8 +62,8 @@ object AzkarFontFamilies {
 
     fun arabic(value: ArabicFontFamily): FontFamily = when (value) {
         ArabicFontFamily.NOTO_NASKH_ARABIC -> NotoNaskhArabic
-        ArabicFontFamily.NOTO_SANS_ARABIC -> Cairo
-        ArabicFontFamily.AMIRI -> Harmattan
+        ArabicFontFamily.NOTO_SANS_ARABIC -> NotoKufiArabic
+        ArabicFontFamily.AMIRI -> AmiriQuran
         ArabicFontFamily.SCHEHERAZADE_NEW -> Lateef
     }
 }

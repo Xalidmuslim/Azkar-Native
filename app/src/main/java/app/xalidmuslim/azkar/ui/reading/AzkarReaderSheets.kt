@@ -1,6 +1,7 @@
 package app.xalidmuslim.azkar.ui.reading
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,6 +10,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -149,11 +152,17 @@ private fun AzkarBottomSheet(
     content: @Composable () -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
+    val overlayInteractionSource = remember { MutableInteractionSource() }
+    val sheetInteractionSource = remember { MutableInteractionSource() }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .testTag(AzkarSheetTestTags.Overlay)
-            .clickable(onClick = onDismiss),
+            .clickable(
+                interactionSource = overlayInteractionSource,
+                indication = null,
+                onClick = onDismiss,
+            ),
         contentAlignment = Alignment.BottomCenter,
     ) {
         val sheetShape = RoundedCornerShape(
@@ -169,7 +178,11 @@ private fun AzkarBottomSheet(
                 .clip(sheetShape)
                 .background(colors.card)
                 .border(AzkarBorders.thin, colors.border, sheetShape)
-                .clickable(onClick = {})
+                .clickable(
+                    interactionSource = sheetInteractionSource,
+                    indication = null,
+                    onClick = {},
+                )
                 .testTag(specificTestTag),
         ) {
             Box(
@@ -511,6 +524,7 @@ private fun AzkarSettingsPreview(settings: AzkarReaderSettings) {
             text = "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
             modifier = Modifier.fillMaxWidth(),
             style = AzkarThemeValues.typography.arabicBody.copy(
+                color = colors.foreground,
                 fontSize = minOf(settings.arabicSizeSp, AzkarDimensions.arabicPreviewMaxSp).sp,
                 textAlign = TextAlign.Right,
             ),
@@ -518,6 +532,7 @@ private fun AzkarSettingsPreview(settings: AzkarReaderSettings) {
         BasicText(
             text = "Предпросмотр русского текста",
             style = AzkarThemeValues.typography.translation.copy(
+                color = colors.foreground,
                 fontSize = minOf(settings.russianSizeSp, AzkarDimensions.russianPreviewMaxSp).sp,
             ),
         )
@@ -560,8 +575,8 @@ private fun AzkarFontSettings(
     AzkarSettingsSection("Арабский шрифт") {
         val options = listOf(
             ArabicFontFamily.NOTO_NASKH_ARABIC to "Чёткий",
-            ArabicFontFamily.NOTO_SANS_ARABIC to "Современный",
-            ArabicFontFamily.AMIRI to "Традиционный",
+            ArabicFontFamily.NOTO_SANS_ARABIC to "Куфи",
+            ArabicFontFamily.AMIRI to "Коранический",
             ArabicFontFamily.SCHEHERAZADE_NEW to "Каллиграфический",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
@@ -594,12 +609,22 @@ private fun AzkarFontTile(
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.fontTile)
+    val backgroundColor = animateColorAsState(
+        targetValue = if (active) colors.activeItemBackground else colors.card,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "font-tile-background",
+    ).value
+    val borderColor = animateColorAsState(
+        targetValue = if (active) colors.primary else colors.border,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "font-tile-border",
+    ).value
     Column(
         modifier = modifier
             .defaultMinSize(minHeight = AzkarDimensions.settingsFontTileMinHeight)
             .clip(shape)
-            .background(if (active) colors.activeItemBackground else colors.card)
-            .border(AzkarBorders.thin, if (active) colors.primary else colors.border, shape)
+            .background(backgroundColor)
+            .border(AzkarBorders.thin, borderColor, shape)
             .clickable(onClick = onClick)
             .padding(
                 horizontal = AzkarSpacing.fontTileHorizontal,
@@ -616,7 +641,7 @@ private fun AzkarFontTile(
         )
         BasicText(
             text = sample,
-            style = AzkarThemeValues.typography.fontTileSample.copy(
+            style = AzkarThemeValues.typography.arabicFontTileSample.copy(
                 color = colors.muted,
                 fontFamily = fontFamily,
             ),
@@ -815,12 +840,22 @@ private fun AzkarToggleTile(
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.toggleItem)
+    val backgroundColor = animateColorAsState(
+        targetValue = if (checked) colors.activeItemBackground else colors.card,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "toggle-background",
+    ).value
+    val borderColor = animateColorAsState(
+        targetValue = if (checked) colors.primary else colors.border,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "toggle-border",
+    ).value
     Column(
         modifier = modifier
             .defaultMinSize(minHeight = AzkarDimensions.toggleItemMinHeight)
             .clip(shape)
-            .background(if (checked) colors.activeItemBackground else colors.card)
-            .border(AzkarBorders.thin, if (checked) colors.primary else colors.border, shape)
+            .background(backgroundColor)
+            .border(AzkarBorders.thin, borderColor, shape)
             .clickable(onClick = onClick)
             .padding(
                 horizontal = AzkarSpacing.toggleItemHorizontal,
@@ -895,12 +930,22 @@ private fun AzkarChoiceTile(
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.themeRow)
+    val backgroundColor = animateColorAsState(
+        targetValue = if (active) colors.activeItemBackground else colors.card,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "choice-background",
+    ).value
+    val borderColor = animateColorAsState(
+        targetValue = if (active) colors.primary else colors.border,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "choice-border",
+    ).value
     Box(
         modifier = modifier
             .defaultMinSize(minHeight = 38.dp)
             .clip(shape)
-            .background(if (active) colors.activeItemBackground else colors.card)
-            .border(AzkarBorders.thin, if (active) colors.primary else colors.border, shape)
+            .background(backgroundColor)
+            .border(AzkarBorders.thin, borderColor, shape)
             .clickable(onClick = onClick)
             .padding(6.dp),
         contentAlignment = Alignment.Center,

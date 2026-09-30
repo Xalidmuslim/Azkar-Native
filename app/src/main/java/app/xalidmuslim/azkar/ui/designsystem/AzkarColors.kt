@@ -97,16 +97,16 @@ object AzkarColors {
     )
 
     val Dark: AzkarColorScheme = scheme(
-        background = Color(0xFF111613),
-        foreground = Color(0xFFEDF2EE),
-        card = Color(0xFF1A211C),
-        surface = Color(0xFF222A24),
-        muted = Color(0xFFAAB5AD),
-        border = Color(0xFF323C35),
-        primary = Color(0xFF7FB99E),
-        accent = Color(0xFF24382E),
-        warning = Color(0xFFC99B58),
-        success = Color(0xFF74AD90),
-        countButtonText = Color(0xFF0F1713),
+        background = Color(0xFF0E1411),
+        foreground = Color(0xFFF0F4F1),
+        card = Color(0xFF161E1A),
+        surface = Color(0xFF202A24),
+        muted = Color(0xFFB3BDB6),
+        border = Color(0xFF39463F),
+        primary = Color(0xFF8BC9AD),
+        accent = Color(0xFF20392E),
+        warning = Color(0xFFD0A15D),
+        success = Color(0xFF82B99A),
+        countButtonText = Color(0xFF0B1410),
     )
 }
