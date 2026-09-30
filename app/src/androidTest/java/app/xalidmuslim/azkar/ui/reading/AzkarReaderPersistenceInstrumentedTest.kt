@@ -10,7 +10,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -18,7 +17,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
-import androidx.compose.ui.test.waitUntilExactlyOneExists
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -260,10 +258,13 @@ class AzkarReaderPersistenceInstrumentedTest {
         } else {
             AzkarReadingTestTags.Card
         }
-        composeRule.waitUntilExactlyOneExists(
-            matcher = hasTestTag(tag),
-            timeoutMillis = 10_000,
-        )
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            runCatching {
+                composeRule.onNodeWithTag(tag, useUnmergedTree = true)
+                    .fetchSemanticsNode()
+            }.isSuccess
+        }
+        composeRule.waitForIdle()
     }
 
     private fun openContents() {
