@@ -346,6 +346,8 @@ class AzkarReaderPersistenceInstrumentedTest {
         composeRule.runOnIdle {
             assertTrue(readerUi.setViewMode(AzkarReaderViewMode.List))
         }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(AzkarReadingTestTags.List).assertIsDisplayed()
         awaitSnapshot { it.viewMode == AzkarReaderViewMode.List }
 
         recreateReader()
@@ -404,6 +406,11 @@ class AzkarReaderPersistenceInstrumentedTest {
     @Test
     fun explanationBehaviorUnchanged() {
         setReader()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                composeRule.onNodeWithTag(AzkarReadingTestTags.Explain).fetchSemanticsNode()
+            }.isSuccess
+        }
         composeRule.onNodeWithTag(AzkarReadingTestTags.Explain)
             .performScrollTo()
             .performClick()
