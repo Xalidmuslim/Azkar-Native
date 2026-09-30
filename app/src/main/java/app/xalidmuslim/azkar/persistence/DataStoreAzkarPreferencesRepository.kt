@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import app.xalidmuslim.azkar.content.AzkarPeriod
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
 import app.xalidmuslim.azkar.ui.designsystem.RussianFontFamily
@@ -38,6 +39,7 @@ class DataStoreAzkarPreferencesRepository(
             preferences[AzkarPreferenceKeys.ShowTranslation] = safe.showTranslation
             preferences[AzkarPreferenceKeys.ShowSources] = safe.showSources
             preferences[AzkarPreferenceKeys.ShowNotes] = safe.showNotes
+            preferences[AzkarPreferenceKeys.HideCompleted] = safe.hideCompleted
             preferences[AzkarPreferenceKeys.Theme] = safe.themeMode.name
         }
     }
@@ -45,6 +47,19 @@ class DataStoreAzkarPreferencesRepository(
     override suspend fun saveViewMode(viewMode: AzkarReaderViewMode) {
         dataStore.edit { preferences ->
             preferences[AzkarPreferenceKeys.ViewMode] = viewMode.name
+        }
+    }
+
+    override suspend fun saveLastPeriod(period: AzkarPeriod) {
+        dataStore.edit { preferences ->
+            preferences[AzkarPreferenceKeys.LastPeriod] = period.name
+        }
+    }
+
+    override suspend fun saveLastItem(period: AzkarPeriod, stableDhikrId: String) {
+        if (stableDhikrId.isBlank()) return
+        dataStore.edit { preferences ->
+            preferences[AzkarPreferenceKeys.lastItem(period)] = stableDhikrId
         }
     }
 
@@ -119,6 +134,7 @@ class DataStoreAzkarPreferencesRepository(
             showTranslation = preferences[AzkarPreferenceKeys.ShowTranslation] ?: true,
             showSources = preferences[AzkarPreferenceKeys.ShowSources] ?: true,
             showNotes = preferences[AzkarPreferenceKeys.ShowNotes] ?: true,
+            hideCompleted = preferences[AzkarPreferenceKeys.HideCompleted] ?: false,
             themeMode = enumOrDefault(
                 preferences[AzkarPreferenceKeys.Theme],
                 AzkarThemeMode.values(),
@@ -133,7 +149,23 @@ class DataStoreAzkarPreferencesRepository(
         val progress = visibleItemIds.associateWith { stableId ->
             (preferences[AzkarPreferenceKeys.progress(date, stableId)] ?: 0).coerceAtLeast(0)
         }
-        return AzkarPreferencesSnapshot(settings, viewMode, progress)
+        val lastPeriod = enumOrDefault(
+            preferences[AzkarPreferenceKeys.LastPeriod],
+            AzkarPeriod.values(),
+            AzkarPeriod.Morning,
+        )
+        val lastItemByPeriod = AzkarPeriod.values().mapNotNull { period ->
+            preferences[AzkarPreferenceKeys.lastItem(period)]
+                ?.takeIf { it.isNotBlank() }
+                ?.let { period to it }
+        }.toMap()
+        return AzkarPreferencesSnapshot(
+            settings = settings,
+            viewMode = viewMode,
+            progressById = progress,
+            lastPeriod = lastPeriod,
+            lastItemByPeriod = lastItemByPeriod,
+        )
     }
 
     private fun validate(settings: AzkarReaderSettings): AzkarReaderSettings {
