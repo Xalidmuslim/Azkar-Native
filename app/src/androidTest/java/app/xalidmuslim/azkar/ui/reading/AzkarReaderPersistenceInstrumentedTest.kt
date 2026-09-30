@@ -251,6 +251,7 @@ class AzkarReaderPersistenceInstrumentedTest {
                 ::readerUi.isInitialized &&
                 readerUi.state.isHydrated
         }
+        composeRule.waitForIdle()
         composeRule.waitUntil(timeoutMillis = 5_000) {
             if (
                 renderedGeneration != expectedGeneration ||
