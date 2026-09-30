@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -426,7 +427,7 @@ private fun AzkarExplanationSheet(
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.insightBodyGap),
         ) {
             if (meaning.isNotBlank()) {
-                AzkarInsightSection("Что это значит") {
+                AzkarInsightSection("Что это значит", AzkarInsightTone.Meaning) {
                     BasicText(
                         text = meaning,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -436,7 +437,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             if (keyMeanings.isNotEmpty()) {
-                AzkarInsightSection("Ключевые смыслы") {
+                AzkarInsightSection("Ключевые смыслы", AzkarInsightTone.KeyMeaning) {
                     BasicText(
                         text = keyMeanings.joinToString("\n\n") { "• $it" },
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -446,7 +447,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             heartFocus?.let { focus ->
-                AzkarInsightSection("О чём думать во время чтения") {
+                AzkarInsightSection("О чём думать во время чтения", AzkarInsightTone.Heart) {
                     BasicText(
                         text = focus,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -456,7 +457,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             relatedReport?.let { report ->
-                AzkarInsightSection("Связанный хадис или случай") {
+                AzkarInsightSection("Связанный хадис или случай", AzkarInsightTone.Report) {
                     BasicText(
                         text = report,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -466,7 +467,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             itemNote?.let { note ->
-                AzkarInsightSection("Примечание") {
+                AzkarInsightSection("Примечание", AzkarInsightTone.Note) {
                     BasicText(
                         text = note,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -476,7 +477,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             if (scholarNotes.isNotEmpty()) {
-                AzkarInsightSection("Слова учёных") {
+                AzkarInsightSection("Слова учёных", AzkarInsightTone.Scholar) {
                     BasicText(
                         text = scholarNotes.joinToString("\n\n") { "• $it" },
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -486,7 +487,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             if (benefits.isNotEmpty()) {
-                AzkarInsightSection("Польза") {
+                AzkarInsightSection("Польза", AzkarInsightTone.Benefit) {
                     BasicText(
                         text = benefits.joinToString("\n\n") { "• $it" },
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -496,7 +497,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             practicalApplication?.let { application ->
-                AzkarInsightSection("Как применять смысл") {
+                AzkarInsightSection("Как применять смысл", AzkarInsightTone.Practice) {
                     BasicText(
                         text = application,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -506,7 +507,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             if (references.isNotEmpty()) {
-                AzkarInsightSection("Источники разбора") {
+                AzkarInsightSection("Источники разбора", AzkarInsightTone.Reference) {
                     BasicText(
                         text = references.joinToString("\n"),
                         style = AzkarThemeValues.typography.insightReferences.copy(
@@ -519,26 +520,65 @@ private fun AzkarExplanationSheet(
     }
 }
 
+private enum class AzkarInsightTone {
+    Meaning,
+    KeyMeaning,
+    Heart,
+    Report,
+    Note,
+    Scholar,
+    Benefit,
+    Practice,
+    Reference,
+}
+
 @Composable
 private fun AzkarInsightSection(
     title: String,
+    tone: AzkarInsightTone,
     content: @Composable () -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.insightSection)
+    val accent = when (tone) {
+        AzkarInsightTone.Meaning -> Color(0xFFA8865E)
+        AzkarInsightTone.KeyMeaning -> Color(0xFF72866F)
+        AzkarInsightTone.Heart -> Color(0xFF71859D)
+        AzkarInsightTone.Report -> Color(0xFF8D7968)
+        AzkarInsightTone.Note -> Color(0xFFA17D51)
+        AzkarInsightTone.Scholar -> Color(0xFF83758D)
+        AzkarInsightTone.Benefit -> Color(0xFF70907C)
+        AzkarInsightTone.Practice -> Color(0xFFA17A68)
+        AzkarInsightTone.Reference -> Color(0xFF798386)
+    }
+    val background = lerp(colors.surface, accent, 0.10f)
+    val border = lerp(colors.border, accent, 0.34f)
+    val heading = lerp(colors.foreground, accent, 0.48f)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(colors.surface)
-            .border(AzkarBorders.thin, colors.border, shape)
+            .background(background)
+            .border(AzkarBorders.thin, border, shape)
             .padding(AzkarSpacing.insightSectionPadding),
         verticalArrangement = Arrangement.spacedBy(AzkarSpacing.scholarTop),
     ) {
-        BasicText(
-            text = title,
-            style = AzkarThemeValues.typography.sectionHeading.copy(color = colors.foreground),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(heading),
+            )
+            BasicText(
+                text = title,
+                style = AzkarThemeValues.typography.sectionHeading.copy(color = heading),
+            )
+        }
         content()
     }
 }

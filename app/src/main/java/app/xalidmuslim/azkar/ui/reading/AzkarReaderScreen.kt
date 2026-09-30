@@ -287,16 +287,15 @@ fun AzkarReaderScreen(
         }
         Unit
     }
-    val gestureModifier = Modifier
-        .azkarHorizontalPaging(
-            enabled = readerUi.allowsHorizontalPaging(resolvedEntries.size),
-            onPrevious = previous,
-            onNext = next,
-        )
-        .graphicsLayer {
-            translationX = transitionOffset.value
-            alpha = transitionAlpha.value
-        }
+    val pagingModifier = Modifier.azkarHorizontalPaging(
+        enabled = readerUi.allowsHorizontalPaging(resolvedEntries.size),
+        onPrevious = previous,
+        onNext = next,
+    )
+    val transitionModifier = Modifier.graphicsLayer {
+        translationX = transitionOffset.value
+        alpha = transitionAlpha.value
+    }
 
     AzkarTheme(
         themeMode = settings.themeMode,
@@ -306,7 +305,14 @@ fun AzkarReaderScreen(
         russianSizeSp = settings.russianSizeSp,
         readerLineHeight = settings.lineHeight,
     ) {
-        Box(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .then(
+                    if (readerUi.viewMode == AzkarReaderViewMode.Cards) pagingModifier
+                    else Modifier,
+                ),
+        ) {
             when (readerUi.viewMode) {
                 AzkarReaderViewMode.Cards -> {
                     AzkarGoldenReadingScreen(
@@ -316,7 +322,7 @@ fun AzkarReaderScreen(
                         onNext = next,
                         shellScrollState = shellScrollState,
                         readingScrollState = readingScrollState,
-                        readingAreaModifier = gestureModifier,
+                        readingAreaModifier = transitionModifier,
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,

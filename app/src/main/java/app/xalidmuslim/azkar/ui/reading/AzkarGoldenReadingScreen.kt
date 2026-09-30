@@ -3,6 +3,7 @@ package app.xalidmuslim.azkar.ui.reading
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -42,7 +43,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -51,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.xalidmuslim.azkar.R
 import app.xalidmuslim.azkar.ui.designsystem.AzkarBorders
 import app.xalidmuslim.azkar.ui.designsystem.AzkarCardSurface
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
@@ -208,22 +212,15 @@ internal fun AzkarHeader(onOpenSettings: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.brandGap),
         ) {
             val brandShape = RoundedCornerShape(AzkarRadius.brandIcon)
-            Box(
+            Image(
+                painter = painterResource(R.drawable.azkar_launcher_art),
+                contentDescription = null,
                 modifier = Modifier
                     .size(AzkarDimensions.brandIcon)
                     .clip(brandShape)
-                    .background(colors.accent)
                     .border(AzkarBorders.thin, colors.border, brandShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                BasicText(
-                    text = "✦",
-                    style = AzkarThemeValues.typography.brandTitle.copy(
-                        color = colors.primary,
-                        fontSize = AzkarDimensions.brandIconGlyphSp.sp,
-                    ),
-                )
-            }
+                contentScale = ContentScale.Crop,
+            )
             Column {
                 BasicText(
                     text = "Азкар",

@@ -18,8 +18,9 @@ internal enum class AzkarSwipeDecision {
 
 internal class AzkarSwipeSession(
     private val thresholdPx: Float,
-    private val dominanceRatio: Float,
-    private val directionLockPx: Float = thresholdPx * 0.34f,
+    private val horizontalLockRatio: Float,
+    private val verticalLockRatio: Float,
+    private val directionLockPx: Float = thresholdPx * 0.26f,
 ) {
     private enum class Axis { Undecided, Horizontal, Vertical }
 
@@ -42,8 +43,9 @@ internal class AzkarSwipeSession(
             if (moved < directionLockPx) return null
 
             axis = when {
-                horizontal > vertical * dominanceRatio -> Axis.Horizontal
-                vertical > horizontal -> Axis.Vertical
+                horizontal >= vertical * horizontalLockRatio -> Axis.Horizontal
+                vertical >= directionLockPx * 1.35f &&
+                    vertical > horizontal * verticalLockRatio -> Axis.Vertical
                 else -> Axis.Undecided
             }
         }
@@ -68,14 +70,15 @@ internal class AzkarSwipeSession(
 
 internal fun Modifier.azkarHorizontalPaging(
     enabled: Boolean,
-    threshold: Dp = 36.dp,
-    dominanceRatio: Float = 1.05f,
+    threshold: Dp = 30.dp,
+    horizontalLockRatio: Float = 0.90f,
+    verticalLockRatio: Float = 1.35f,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ): Modifier {
     if (!enabled) return this
 
-    return pointerInput(enabled, threshold, dominanceRatio) {
+    return pointerInput(enabled, threshold, horizontalLockRatio, verticalLockRatio) {
         val thresholdPx = threshold.toPx()
 
         awaitEachGesture {
@@ -87,16 +90,15 @@ internal fun Modifier.azkarHorizontalPaging(
             val start: Offset = down.position
             val session = AzkarSwipeSession(
                 thresholdPx = thresholdPx,
-                dominanceRatio = dominanceRatio,
+                horizontalLockRatio = horizontalLockRatio,
+                verticalLockRatio = verticalLockRatio,
             )
 
             while (true) {
                 val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                 val pressedCount = event.changes.count { it.pressed }
 
-                if (pressedCount > 1) {
-                    session.cancel()
-                }
+                if (pressedCount > 1) session.cancel()
 
                 val change = event.changes.firstOrNull { it.id == activePointer }
                 if (change == null) {
@@ -115,11 +117,10 @@ internal fun Modifier.azkarHorizontalPaging(
                     event.changes.forEach { it.consume() }
                 }
 
-                if (decision != null) {
-                    when (decision) {
-                        AzkarSwipeDecision.Next -> onNext()
-                        AzkarSwipeDecision.Previous -> onPrevious()
-                    }
+                when (decision) {
+                    AzkarSwipeDecision.Next -> onNext()
+                    AzkarSwipeDecision.Previous -> onPrevious()
+                    null -> Unit
                 }
 
                 if (!change.pressed) break
