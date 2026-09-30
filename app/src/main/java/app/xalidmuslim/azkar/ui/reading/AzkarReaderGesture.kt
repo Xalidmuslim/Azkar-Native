@@ -20,8 +20,8 @@ internal class AzkarSwipeSession(
     private val thresholdPx: Float,
     private val horizontalLockRatio: Float,
     private val verticalLockRatio: Float,
-    private val directionLockPx: Float = thresholdPx * 0.38f,
-    private val verticalLockPx: Float = thresholdPx * 0.78f,
+    private val directionLockPx: Float = thresholdPx * 0.30f,
+    private val verticalLockPx: Float = thresholdPx * 1.65f,
 ) {
     private enum class Axis { Undecided, Horizontal, Vertical }
 
@@ -71,9 +71,9 @@ internal class AzkarSwipeSession(
 
 internal fun Modifier.azkarHorizontalPaging(
     enabled: Boolean,
-    threshold: Dp = 26.dp,
-    horizontalLockRatio: Float = 0.82f,
-    verticalLockRatio: Float = 1.55f,
+    threshold: Dp = 24.dp,
+    horizontalLockRatio: Float = 0.76f,
+    verticalLockRatio: Float = 1.70f,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ): Modifier {

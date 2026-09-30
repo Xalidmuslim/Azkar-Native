@@ -8,6 +8,8 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
@@ -18,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -314,6 +317,26 @@ fun AzkarReaderScreen(
                     else Modifier,
                 ),
         ) {
+            if (readerUi.viewMode == AzkarReaderViewMode.Cards) {
+                // Android gesture navigation owns the extreme left/right edge by default.
+                // Reserve only a centered 200dp band so paging works from the edge while
+                // system Back remains available above and below this band.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .width(32.dp)
+                        .height(200.dp)
+                        .systemGestureExclusion(),
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(32.dp)
+                        .height(200.dp)
+                        .systemGestureExclusion(),
+                )
+            }
+
             when (readerUi.viewMode) {
                 AzkarReaderViewMode.Cards -> {
                     AzkarGoldenReadingScreen(
@@ -323,7 +346,7 @@ fun AzkarReaderScreen(
                         onNext = next,
                         shellScrollState = shellScrollState,
                         readingScrollState = readingScrollState,
-                        readingAreaModifier = transitionModifier.systemGestureExclusion(),
+                        readingAreaModifier = transitionModifier,
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,

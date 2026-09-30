@@ -1,5 +1,6 @@
 package app.xalidmuslim.azkar.ui.reading
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -34,7 +35,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -212,15 +216,23 @@ internal fun AzkarHeader(onOpenSettings: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.brandGap),
         ) {
             val brandShape = RoundedCornerShape(AzkarRadius.brandIcon)
-            Image(
-                painter = painterResource(R.drawable.azkar_launcher_art),
-                contentDescription = null,
+            Box(
                 modifier = Modifier
                     .size(AzkarDimensions.brandIcon)
                     .clip(brandShape)
+                    .background(colors.surface)
                     .border(AzkarBorders.thin, colors.border, brandShape),
-                contentScale = ContentScale.Crop,
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.azkar_launcher_art),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth(0.84f)
+                        .clip(RoundedCornerShape(10.dp)),
+                    contentScale = ContentScale.Fit,
+                )
+            }
             Column {
                 BasicText(
                     text = "Азкар",
@@ -531,6 +543,7 @@ internal fun AzkarDhikrCard(
     val item = state.item
     val colors = AzkarThemeValues.colors
     val completed = state.currentCount >= item.count
+    var showTransliteration by rememberSaveable(item.id) { mutableStateOf(true) }
 
     val cardModifier = Modifier
         .fillMaxWidth()
@@ -645,6 +658,53 @@ internal fun AzkarDhikrCard(
                     .testTag(AzkarReadingTestTags.Arabic),
                 style = AzkarThemeValues.typography.arabicBody.copy(color = colors.foreground),
             )
+
+            if (item.transliteration.isNotBlank()) {
+                val transliterationShape = RoundedCornerShape(AzkarRadius.noteBox)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .clip(transliterationShape)
+                        .background(colors.surface)
+                        .clickable { showTransliteration = !showTransliteration }
+                        .padding(
+                            horizontal = AzkarSpacing.noteHorizontal,
+                            vertical = 8.dp,
+                        ),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        BasicText(
+                            text = "Транскрипция",
+                            modifier = Modifier.weight(1f),
+                            style = AzkarThemeValues.typography.sourceRow.copy(
+                                color = colors.primary,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                        )
+                        BasicText(
+                            text = if (showTransliteration) "Скрыть ︿" else "Показать ﹀",
+                            style = AzkarThemeValues.typography.sourceRow.copy(color = colors.muted),
+                        )
+                    }
+                    AnimatedVisibility(visible = showTransliteration) {
+                        BasicText(
+                            text = item.transliteration,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp),
+                            style = AzkarThemeValues.typography.translation.copy(
+                                color = colors.muted,
+                                fontSize = (AzkarThemeValues.typography.translation.fontSize.value - 1f)
+                                    .coerceAtLeast(13f).sp,
+                            ),
+                        )
+                    }
+                }
+            }
 
             if (showTranslation) {
                 BasicText(
