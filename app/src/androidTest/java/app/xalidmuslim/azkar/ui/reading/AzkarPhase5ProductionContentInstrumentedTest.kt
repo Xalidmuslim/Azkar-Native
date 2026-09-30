@@ -280,17 +280,45 @@ class AzkarPhase5ProductionContentInstrumentedTest {
             assertEquals(null, uiController.state.selectedExplanationId)
         }
 
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            val cardNode = runCatching {
+                composeRule
+                    .onNodeWithTag(AzkarReadingTestTags.Card, useUnmergedTree = true)
+                    .fetchSemanticsNode()
+            }.getOrNull() ?: return@waitUntil false
+            val renderedTitleNodes = composeRule
+                .onAllNodesWithText(expectedTitle, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+            val explainNodes = composeRule
+                .onAllNodesWithTag(AzkarReadingTestTags.Explain, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+
+            renderedTitleNodes.count { isDescendantOf(it, cardNode.id) } == 1 &&
+                explainNodes.count { isDescendantOf(it, cardNode.id) } == 1
+        }
+
         val cardNode = composeRule
             .onNodeWithTag(AzkarReadingTestTags.Card, useUnmergedTree = true)
             .fetchSemanticsNode()
         val renderedTitleNodes = composeRule
             .onAllNodesWithText(expectedTitle, useUnmergedTree = true)
             .fetchSemanticsNodes()
-        assertEquals(1, renderedTitleNodes.count { isDescendantOf(it, cardNode.id) })
+        val explainNodes = composeRule
+            .onAllNodesWithTag(AzkarReadingTestTags.Explain, useUnmergedTree = true)
+            .fetchSemanticsNodes()
 
-        composeRule.onNodeWithTag(AzkarReadingTestTags.Explain)
+        assertEquals(1, renderedTitleNodes.count { isDescendantOf(it, cardNode.id) })
+        assertEquals(1, explainNodes.count { isDescendantOf(it, cardNode.id) })
+
+        composeRule.onNodeWithTag(AzkarReadingTestTags.Explain, useUnmergedTree = true)
             .performScrollTo()
+            .assertIsDisplayed()
             .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            uiController.state.activeSheet == AzkarReaderSheet.Explanation &&
+                uiController.state.selectedExplanationId == expectedId
+        }
         composeRule.waitForIdle()
 
         composeRule.runOnIdle {
