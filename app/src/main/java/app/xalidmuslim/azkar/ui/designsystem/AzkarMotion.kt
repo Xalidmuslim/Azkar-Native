@@ -4,12 +4,12 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.ui.unit.dp
 
 object AzkarMotion {
-    const val dhikrPageDurationMillis = 620
-    const val sheetDurationMillis = 360
+    const val dhikrPageDurationMillis = 300
+    const val sheetDurationMillis = 300
     const val progressDurationMillis = 350
-    const val toggleDurationMillis = 240
-    const val stateTransitionDurationMillis = 260
-    const val themeTransitionDurationMillis = 420
+    const val toggleDurationMillis = 180
+    const val stateTransitionDurationMillis = 220
+    const val themeTransitionDurationMillis = 380
     val dhikrPageEasing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
     val sheetEasing = dhikrPageEasing
     val progressEasing = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
