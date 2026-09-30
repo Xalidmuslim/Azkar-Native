@@ -4,6 +4,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
@@ -78,7 +79,10 @@ internal fun Modifier.azkarHorizontalPaging(
         val thresholdPx = threshold.toPx()
 
         awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false)
+            val down = awaitFirstDown(
+                requireUnconsumed = false,
+                pass = PointerEventPass.Initial,
+            )
             val activePointer: PointerId = down.id
             val start: Offset = down.position
             val session = AzkarSwipeSession(
@@ -87,7 +91,7 @@ internal fun Modifier.azkarHorizontalPaging(
             )
 
             while (true) {
-                val event = awaitPointerEvent()
+                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                 val pressedCount = event.changes.count { it.pressed }
 
                 if (pressedCount > 1) {
