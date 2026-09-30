@@ -24,16 +24,19 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import app.xalidmuslim.azkar.persistence.AzkarDateProvider
+import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
 import app.xalidmuslim.azkar.persistence.AzkarPreferencesSnapshot
 import app.xalidmuslim.azkar.persistence.DataStoreAzkarPreferencesRepository
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
 import java.io.File
 import java.time.LocalDate
 import java.util.UUID
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -57,7 +60,8 @@ class AzkarReaderPersistenceInstrumentedTest {
 
     private lateinit var dataStoreScope: CoroutineScope
     private lateinit var dataStore: DataStore<Preferences>
-    private lateinit var repository: DataStoreAzkarPreferencesRepository
+    private lateinit var backingRepository: DataStoreAzkarPreferencesRepository
+    private lateinit var repository: AzkarPreferencesRepository
     private lateinit var dateProvider: FakeDateProvider
     private lateinit var dataStoreFile: File
 
@@ -65,6 +69,54 @@ class AzkarReaderPersistenceInstrumentedTest {
     private lateinit var readerUi: AzkarReaderUiController
     private lateinit var generation: MutableIntState
     private var renderedGeneration: Int = -1
+
+
+    private class ResetTracingRepository(
+        private val delegate: DataStoreAzkarPreferencesRepository,
+        private val snapshotIds: Set<String>,
+    ) : AzkarPreferencesRepository {
+        val resetCalled = CompletableDeferred<Pair<LocalDate, Set<String>>>()
+        val resetWriteCompleted = CompletableDeferred<AzkarPreferencesSnapshot>()
+
+        override fun observeSnapshot(
+            date: LocalDate,
+            visibleItemIds: Set<String>,
+        ): Flow<AzkarPreferencesSnapshot> = delegate.observeSnapshot(date, visibleItemIds)
+
+        override suspend fun saveSettings(settings: AzkarReaderSettings) {
+            delegate.saveSettings(settings)
+        }
+
+        override suspend fun saveViewMode(viewMode: AzkarReaderViewMode) {
+            delegate.saveViewMode(viewMode)
+        }
+
+        override suspend fun incrementProgress(
+            date: LocalDate,
+            stableDhikrId: String,
+            target: Int,
+        ): Int = delegate.incrementProgress(date, stableDhikrId, target)
+
+        override suspend fun resetProgress(
+            date: LocalDate,
+            visibleItemIds: Set<String>,
+        ) {
+            val ids = visibleItemIds.toSet()
+            Log.i(
+                "AzkarPhase4Reset",
+                "repository reset called date=$date visibleIds=$ids",
+            )
+            resetCalled.complete(date to ids)
+            delegate.resetProgress(date, ids)
+            val snapshot = delegate.observeSnapshot(date, snapshotIds).first()
+            Log.i(
+                "AzkarPhase4Reset",
+                "repository reset write completed snapshot=${snapshot.progressById} " +
+                    "viewMode=${snapshot.viewMode} settings=${snapshot.settings}",
+            )
+            resetWriteCompleted.complete(snapshot)
+        }
+    }
 
     private fun item(
         id: String,
@@ -102,7 +154,8 @@ class AzkarReaderPersistenceInstrumentedTest {
             scope = dataStoreScope,
             produceFile = { dataStoreFile },
         )
-        repository = DataStoreAzkarPreferencesRepository(dataStore)
+        backingRepository = DataStoreAzkarPreferencesRepository(dataStore)
+        repository = backingRepository
         dateProvider = FakeDateProvider(LocalDate.of(2026, 9, 29))
     }
 
@@ -317,28 +370,50 @@ class AzkarReaderPersistenceInstrumentedTest {
     @Test
     fun resetClearsCurrentVisibleEntries() {
         val visibleIds = entries().map { it.item.id }.toSet()
+        val unrelatedId = "unrelated"
+        val snapshotIds = visibleIds + unrelatedId
+        val seededSettings = AzkarReaderSettings(showSources = false)
+
         Log.i(
             "AzkarPhase4Reset",
-            "test start date=${dateProvider.date} visibleIds=$visibleIds file=${dataStoreFile.absolutePath}",
+            "test start date=${dateProvider.date} visibleIds=$visibleIds " +
+                "snapshotIds=$snapshotIds file=${dataStoreFile.absolutePath}",
         )
-        setReader()
-        composeRule.runOnIdle {
-            Log.i("AzkarPhase4Reset", "hydrated controller=${readerUi.state}")
-        }
-        currentSnapshot("after_hydration", visibleIds)
 
-        clickCount("one")
+        runBlocking {
+            backingRepository.saveSettings(seededSettings)
+            backingRepository.incrementProgress(dateProvider.date, "one", 1)
+            backingRepository.incrementProgress(dateProvider.date, "three", 3)
+            backingRepository.incrementProgress(dateProvider.date, unrelatedId, 1)
+        }
+        val beforeReset = currentSnapshot("before_reset_seeded", snapshotIds)
+        assertEquals(1, beforeReset.progressById.getValue("one"))
+        assertEquals(1, beforeReset.progressById.getValue("three"))
+        assertEquals(0, beforeReset.progressById.getValue("hundred"))
+        assertEquals(1, beforeReset.progressById.getValue(unrelatedId))
+        assertEquals(seededSettings, beforeReset.settings)
+
+        val tracingRepository = ResetTracingRepository(
+            delegate = backingRepository,
+            snapshotIds = snapshotIds,
+        )
+        repository = tracingRepository
+        setReader()
+
+        val settingsBefore = readerUi.state.settings
+        val viewModeBefore = readerUi.state.viewMode
+        val historyBefore = navigation.state.history.toList()
         composeRule.runOnIdle {
             Log.i(
                 "AzkarPhase4Reset",
-                "after increment tap controllerProgress=${readerUi.state.progressById}",
+                "hydrated controller progress=${readerUi.state.progressById} " +
+                    "settings=${readerUi.state.settings} viewMode=${readerUi.state.viewMode} " +
+                    "history=${navigation.state.history}",
             )
+            assertEquals(1, readerUi.currentCount("one"))
+            assertEquals(1, readerUi.currentCount("three"))
+            assertEquals(0, readerUi.currentCount("hundred"))
         }
-        awaitSnapshot(
-            label = "seeded_progress",
-            ids = visibleIds,
-        ) { it.progressById["one"] == 1 }
-        currentSnapshot("before_reset", visibleIds)
 
         Log.i("AzkarPhase4Reset", "tap Reset begin")
         composeRule.onNodeWithTag(AzkarReadingTestTags.ResetProgress)
@@ -347,22 +422,49 @@ class AzkarReaderPersistenceInstrumentedTest {
         composeRule.waitForIdle()
         Log.i("AzkarPhase4Reset", "tap Reset returned")
 
+        val called = runBlocking {
+            withTimeout(15_000) { tracingRepository.resetCalled.await() }
+        }
+        assertEquals(dateProvider.date, called.first)
+        assertEquals(visibleIds, called.second)
+
+        val snapshotImmediatelyAfterWrite = runBlocking {
+            withTimeout(15_000) { tracingRepository.resetWriteCompleted.await() }
+        }
+        assertEquals(0, snapshotImmediatelyAfterWrite.progressById.getValue("one"))
+        assertEquals(0, snapshotImmediatelyAfterWrite.progressById.getValue("three"))
+        assertEquals(0, snapshotImmediatelyAfterWrite.progressById.getValue("hundred"))
+        assertEquals(1, snapshotImmediatelyAfterWrite.progressById.getValue(unrelatedId))
+        assertEquals(settingsBefore, snapshotImmediatelyAfterWrite.settings)
+        assertEquals(viewModeBefore, snapshotImmediatelyAfterWrite.viewMode)
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            readerUi.currentCount("one") == 0 &&
+                readerUi.currentCount("three") == 0 &&
+                readerUi.currentCount("hundred") == 0
+        }
         composeRule.runOnIdle {
             Log.i(
                 "AzkarPhase4Reset",
-                "after reset UI/controller progress=${readerUi.state.progressById}",
+                "after Flow/UI update progress=${readerUi.state.progressById} " +
+                    "settings=${readerUi.state.settings} viewMode=${readerUi.state.viewMode} " +
+                    "history=${navigation.state.history}",
             )
             assertEquals(0, readerUi.currentCount("one"))
             assertEquals(0, readerUi.currentCount("three"))
             assertEquals(0, readerUi.currentCount("hundred"))
+            assertEquals(settingsBefore, readerUi.state.settings)
+            assertEquals(viewModeBefore, readerUi.state.viewMode)
+            assertEquals(historyBefore, navigation.state.history)
         }
-        awaitSnapshot(
-            label = "after_reset",
-            ids = visibleIds,
-        ) {
-            it.progressById.values.all { count -> count == 0 }
-        }
-        currentSnapshot("after_reset_confirmed", visibleIds)
+
+        val finalSnapshot = currentSnapshot("after_reset_confirmed", snapshotIds)
+        assertEquals(0, finalSnapshot.progressById.getValue("one"))
+        assertEquals(0, finalSnapshot.progressById.getValue("three"))
+        assertEquals(0, finalSnapshot.progressById.getValue("hundred"))
+        assertEquals(1, finalSnapshot.progressById.getValue(unrelatedId))
+        assertEquals(settingsBefore, finalSnapshot.settings)
+        assertEquals(viewModeBefore, finalSnapshot.viewMode)
         Log.i("AzkarPhase4Reset", "test end")
     }
 
