@@ -61,6 +61,8 @@ internal object AzkarReadingTestTags {
     const val Header = "azkar-header"
     const val SourceNote = "azkar-source-note"
     const val PeriodTabs = "azkar-period-tabs"
+    const val PeriodMorning = "azkar-period-morning"
+    const val PeriodEvening = "azkar-period-evening"
     const val Progress = "azkar-progress"
     const val Toolbar = "azkar-toolbar"
     const val Card = "azkar-card"
@@ -105,6 +107,7 @@ fun AzkarGoldenReadingScreen(
     onOpenExplanation: (String) -> Unit = {},
     onIncrementCount: (String, Int) -> Unit = { _, _ -> },
     onResetProgress: () -> Unit = {},
+    onPeriodChange: (AzkarPeriod) -> Unit = {},
     compactReader: Boolean = false,
     showTranslation: Boolean = true,
     showSources: Boolean = true,
@@ -137,7 +140,7 @@ fun AzkarGoldenReadingScreen(
             Column(modifier = shellModifier) {
                 AzkarHeader(onOpenSettings)
                 AzkarSourceNote()
-                AzkarPeriodTabs(state.period)
+                AzkarPeriodTabs(state.period, onPeriodChange)
                 AzkarProgressCard(state, onResetProgress)
                 AzkarReaderToolbar(state, narrow, onOpenContents, onOpenSettings)
                 AzkarDhikrCard(
@@ -254,7 +257,10 @@ internal fun AzkarSourceNote() {
 }
 
 @Composable
-internal fun AzkarPeriodTabs(period: AzkarPeriod) {
+internal fun AzkarPeriodTabs(
+    period: AzkarPeriod,
+    onPeriodChange: (AzkarPeriod) -> Unit = {},
+) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.periodTabs)
     Row(
@@ -271,18 +277,29 @@ internal fun AzkarPeriodTabs(period: AzkarPeriod) {
         AzkarPeriodButton(
             text = "☀ Утро",
             active = period == AzkarPeriod.Morning,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .testTag(AzkarReadingTestTags.PeriodMorning),
+            onClick = { onPeriodChange(AzkarPeriod.Morning) },
         )
         AzkarPeriodButton(
             text = "☾ Вечер",
             active = period == AzkarPeriod.Evening,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .testTag(AzkarReadingTestTags.PeriodEvening),
+            onClick = { onPeriodChange(AzkarPeriod.Evening) },
         )
     }
 }
 
 @Composable
-private fun AzkarPeriodButton(text: String, active: Boolean, modifier: Modifier) {
+private fun AzkarPeriodButton(
+    text: String,
+    active: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.periodButton)
     Box(
@@ -293,6 +310,7 @@ private fun AzkarPeriodButton(text: String, active: Boolean, modifier: Modifier)
                 else Modifier,
             )
             .clip(shape)
+            .clickable(enabled = !active, onClick = onClick)
             .background(if (active) colors.card else Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
