@@ -369,13 +369,27 @@ class AzkarReaderPersistenceInstrumentedTest {
 
     @Test
     fun countZeroToOneInCards() {
+        val tracingRepository = IncrementTracingRepository(backingRepository)
+        repository = tracingRepository
+
         setReader()
         clickCount("one")
 
         composeRule.runOnIdle {
             assertEquals(1, readerUi.currentCount("one"))
         }
-        awaitSnapshot("generic") { it.progressById["one"] == 1 }
+
+        val completedWrite = runBlocking {
+            withTimeout(5_000) {
+                tracingRepository.incrementWriteCompleted.await()
+            }
+        }
+        assertEquals(dateProvider.date, completedWrite.first)
+        assertEquals("one", completedWrite.second)
+        assertEquals(1, completedWrite.third)
+
+        val persistedSnapshot = currentSnapshot("count-zero-to-one-written")
+        assertEquals(1, persistedSnapshot.progressById["one"])
     }
 
     @Test
