@@ -1,7 +1,11 @@
 package app.xalidmuslim.azkar.ui.reading
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,10 +17,12 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -25,12 +31,16 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -45,6 +55,7 @@ import app.xalidmuslim.azkar.ui.designsystem.AzkarBorders
 import app.xalidmuslim.azkar.ui.designsystem.AzkarCardSurface
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarElevation
+import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
 import app.xalidmuslim.azkar.ui.designsystem.AzkarIconButton
 import app.xalidmuslim.azkar.ui.designsystem.AzkarIconButtonSize
 import app.xalidmuslim.azkar.ui.designsystem.AzkarPrimaryButton
@@ -104,7 +115,9 @@ fun AzkarGoldenReadingScreen(
     readingAreaModifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
     onOpenContents: () -> Unit = {},
+    onOpenSourceInfo: () -> Unit = {},
     onOpenExplanation: (String) -> Unit = {},
+    onOpenActions: (String) -> Unit = {},
     onIncrementCount: (String, Int) -> Unit = { _, _ -> },
     onResetProgress: () -> Unit = {},
     onPeriodChange: (AzkarPeriod) -> Unit = {},
@@ -112,6 +125,8 @@ fun AzkarGoldenReadingScreen(
     showTranslation: Boolean = true,
     showSources: Boolean = true,
     showNotes: Boolean = true,
+    canPrevious: Boolean = state.position > 1,
+    canNext: Boolean = state.position < state.total,
 ) {
     AzkarSurface(modifier = modifier.fillMaxWidth().testTag(AzkarReadingTestTags.Screen)) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -139,7 +154,7 @@ fun AzkarGoldenReadingScreen(
 
             Column(modifier = shellModifier) {
                 AzkarHeader(onOpenSettings)
-                AzkarSourceNote()
+                AzkarSourceNote(onOpenSourceInfo)
                 AzkarPeriodTabs(state.period, onPeriodChange)
                 AzkarProgressCard(state, onResetProgress)
                 AzkarReaderToolbar(state, narrow, onOpenContents, onOpenSettings)
@@ -154,6 +169,7 @@ fun AzkarGoldenReadingScreen(
                     showSources = showSources,
                     showNotes = showNotes,
                     onOpenExplanation = { onOpenExplanation(state.item.id) },
+                    onOpenActions = { onOpenActions(state.item.id) },
                     onIncrementCount = {
                         onIncrementCount(state.item.id, state.item.count)
                     },
@@ -163,6 +179,8 @@ fun AzkarGoldenReadingScreen(
                     narrow = narrow,
                     onPrevious = onPrevious,
                     onNext = onNext,
+                    canPrevious = canPrevious,
+                    canNext = canNext,
                 )
                 AzkarFooter()
             }
@@ -234,25 +252,38 @@ internal fun AzkarHeader(onOpenSettings: () -> Unit) {
 }
 
 @Composable
-internal fun AzkarSourceNote() {
+internal fun AzkarSourceNote(onOpenSourceInfo: () -> Unit = {}) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.sourceNote)
-    Box(
+    val interactionSource = remember { MutableInteractionSource() }
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
             .background(colors.surface)
-            .border(AzkarBorders.thin, colors.border, shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onOpenSourceInfo,
+            )
             .padding(
                 horizontal = AzkarSpacing.sourceNoteHorizontal,
                 vertical = AzkarSpacing.sourceNoteVertical,
             )
             .testTag(AzkarReadingTestTags.SourceNote),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        BasicText(
-            text = SourceNoteText,
-            style = AzkarThemeValues.typography.sourceNote.copy(color = colors.muted),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            BasicText(
+                text = "Источник списка",
+                style = AzkarThemeValues.typography.progressLabel.copy(color = colors.foreground),
+            )
+            BasicText(
+                text = "Абдуль-Азиз ат-Тарифи · Подробнее ›",
+                style = AzkarThemeValues.typography.sourceNote.copy(color = colors.muted),
+            )
+        }
     }
 }
 
@@ -263,7 +294,7 @@ internal fun AzkarPeriodTabs(
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.periodTabs)
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = AzkarSpacing.periodTop, bottom = AzkarSpacing.periodBottom)
@@ -272,24 +303,49 @@ internal fun AzkarPeriodTabs(
             .border(AzkarBorders.thin, colors.border, shape)
             .padding(AzkarSpacing.periodInternal)
             .testTag(AzkarReadingTestTags.PeriodTabs),
-        horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.periodGap),
     ) {
-        AzkarPeriodButton(
-            text = "☀ Утро",
-            active = period == AzkarPeriod.Morning,
-            modifier = Modifier
-                .weight(1f)
-                .testTag(AzkarReadingTestTags.PeriodMorning),
-            onClick = { onPeriodChange(AzkarPeriod.Morning) },
-        )
-        AzkarPeriodButton(
-            text = "☾ Вечер",
-            active = period == AzkarPeriod.Evening,
-            modifier = Modifier
-                .weight(1f)
-                .testTag(AzkarReadingTestTags.PeriodEvening),
-            onClick = { onPeriodChange(AzkarPeriod.Evening) },
-        )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val tabWidth = (maxWidth - AzkarSpacing.periodGap) / 2
+            val indicatorX by animateDpAsState(
+                targetValue = if (period == AzkarPeriod.Morning) 0.dp
+                    else tabWidth + AzkarSpacing.periodGap,
+                animationSpec = tween(
+                    durationMillis = AzkarMotion.stateTransitionDurationMillis,
+                    easing = AzkarMotion.sheetEasing,
+                ),
+                label = "period-indicator",
+            )
+            Box(
+                modifier = Modifier
+                    .offset(x = indicatorX)
+                    .width(tabWidth)
+                    .defaultMinSize(minHeight = AzkarDimensions.periodButtonMinHeight)
+                    .azkarShadow(AzkarElevation.ActivePeriod, AzkarRadius.periodButton)
+                    .clip(RoundedCornerShape(AzkarRadius.periodButton))
+                    .background(colors.card),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.periodGap),
+            ) {
+                AzkarPeriodButton(
+                    text = "☀ Утро",
+                    active = period == AzkarPeriod.Morning,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(AzkarReadingTestTags.PeriodMorning),
+                    onClick = { onPeriodChange(AzkarPeriod.Morning) },
+                )
+                AzkarPeriodButton(
+                    text = "☾ Вечер",
+                    active = period == AzkarPeriod.Evening,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(AzkarReadingTestTags.PeriodEvening),
+                    onClick = { onPeriodChange(AzkarPeriod.Evening) },
+                )
+            }
+        }
     }
 }
 
@@ -305,13 +361,9 @@ private fun AzkarPeriodButton(
     Box(
         modifier = modifier
             .defaultMinSize(minHeight = AzkarDimensions.periodButtonMinHeight)
-            .then(
-                if (active) Modifier.azkarShadow(AzkarElevation.ActivePeriod, AzkarRadius.periodButton)
-                else Modifier,
-            )
             .clip(shape)
             .clickable(enabled = !active, onClick = onClick)
-            .background(if (active) colors.card else Color.Transparent),
+            .background(Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(
@@ -367,7 +419,7 @@ internal fun AzkarProgressCard(
                 style = AzkarThemeValues.typography.resetTextButton.copy(color = colors.muted),
             )
         }
-        AzkarProgressBar(progress = roundedPercent / 100f, animate = false)
+        AzkarProgressBar(progress = roundedPercent / 100f, animate = true)
     }
 }
 
@@ -476,6 +528,7 @@ internal fun AzkarDhikrCard(
     showSources: Boolean,
     showNotes: Boolean,
     onOpenExplanation: () -> Unit,
+    onOpenActions: () -> Unit,
     onIncrementCount: () -> Unit,
 ) {
     val item = state.item
@@ -548,19 +601,36 @@ internal fun AzkarDhikrCard(
                     }
                 }
 
-                if (completed) {
-                    Box(
-                        modifier = Modifier
-                            .size(AzkarDimensions.doneMarker)
-                            .clip(CircleShape)
-                            .background(colors.doneMarkerBackground)
-                            .border(AzkarBorders.thin, colors.doneMarkerBorder, CircleShape),
-                        contentAlignment = Alignment.Center,
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (completed) {
+                        Box(
+                            modifier = Modifier
+                                .size(AzkarDimensions.doneMarker)
+                                .clip(CircleShape)
+                                .background(colors.doneMarkerBackground)
+                                .border(AzkarBorders.thin, colors.doneMarkerBorder, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            BasicText(
+                                text = "✓",
+                                style = AzkarThemeValues.typography.toolbarButton.copy(
+                                    color = colors.success,
+                                ),
+                            )
+                        }
+                    }
+                    AzkarIconButton(
+                        onClick = onOpenActions,
+                        size = AzkarIconButtonSize.Compact,
                     ) {
                         BasicText(
-                            text = "✓",
-                            style = AzkarThemeValues.typography.toolbarButton.copy(
-                                color = colors.success,
+                            text = "⋮",
+                            style = AzkarThemeValues.typography.cardHeading.copy(
+                                color = colors.muted,
+                                fontSize = 20.sp,
                             ),
                         )
                     }
@@ -722,6 +792,16 @@ private fun AzkarCounterRow(
 @Composable
 private fun AzkarCounterText(state: AzkarGoldenReadingUiState, completed: Boolean) {
     val colors = AzkarThemeValues.colors
+    val countScale = remember { Animatable(1f) }
+    LaunchedEffect(state.currentCount) {
+        if (state.currentCount > 0) {
+            countScale.snapTo(1.10f)
+            countScale.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(AzkarMotion.toggleDurationMillis),
+            )
+        }
+    }
     if (completed) {
         BasicText(
             text = "Выполнено",
@@ -732,6 +812,10 @@ private fun AzkarCounterText(state: AzkarGoldenReadingUiState, completed: Boolea
         )
     } else {
         BasicText(
+            modifier = Modifier.graphicsLayer {
+                scaleX = countScale.value
+                scaleY = countScale.value
+            },
             text = buildAnnotatedString {
                 pushStyle(
                     SpanStyle(
@@ -774,6 +858,8 @@ private fun AzkarPager(
     narrow: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    canPrevious: Boolean = state.position > 1,
+    canNext: Boolean = state.position < state.total,
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.pager)
@@ -792,7 +878,7 @@ private fun AzkarPager(
         AzkarPagerButton(
             text = "‹ Назад",
             primary = false,
-            enabled = state.position > 1,
+            enabled = canPrevious,
             modifier = Modifier.weight(1f),
             testTag = AzkarReadingTestTags.Previous,
             onClick = onPrevious,
@@ -831,7 +917,7 @@ private fun AzkarPager(
         AzkarPagerButton(
             text = "Далее ›",
             primary = true,
-            enabled = state.position < state.total,
+            enabled = canNext,
             modifier = Modifier.weight(1f),
             testTag = AzkarReadingTestTags.Next,
             onClick = onNext,
