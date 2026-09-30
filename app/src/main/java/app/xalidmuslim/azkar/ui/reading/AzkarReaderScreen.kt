@@ -11,8 +11,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -116,6 +119,54 @@ fun AzkarReaderScreen(
     }
     val activeIndex = navigation.activeIndex.coerceIn(resolvedEntries.indices)
     val active = resolvedEntries[activeIndex]
+
+    var restoredLastItem by remember(period, controller) { mutableStateOf(false) }
+    LaunchedEffect(readerUi.isHydrated, period, readerUi.lastItemByPeriod) {
+        if (readerUi.isHydrated && !restoredLastItem) {
+            val savedId = readerUi.lastItemByPeriod[period]
+            val savedIndex = resolvedEntries.indexOfFirst { it.item.id == savedId }
+            if (savedIndex >= 0 && savedIndex != controller.state.activeIndex) {
+                controller.selectAnchor(savedIndex)
+            }
+            restoredLastItem = true
+        }
+    }
+    LaunchedEffect(restoredLastItem, period, navigation.activeIndex) {
+        if (restoredLastItem) {
+            resolvedEntries.getOrNull(navigation.activeIndex)?.let { entry ->
+                resolvedUiController.saveLastItem(period, entry.item.id)
+            }
+        }
+    }
+
+    val previousTarget = if (settings.hideCompleted) {
+        (activeIndex - 1 downTo 0).firstOrNull { index ->
+            resolvedEntries[index].currentCount < resolvedEntries[index].item.count
+        }
+    } else {
+        (activeIndex - 1).takeIf { it >= 0 }
+    }
+    val nextTarget = if (settings.hideCompleted) {
+        (activeIndex + 1 until resolvedEntries.size).firstOrNull { index ->
+            resolvedEntries[index].currentCount < resolvedEntries[index].item.count
+        }
+    } else {
+        (activeIndex + 1).takeIf { it < resolvedEntries.size }
+    }
+
+    LaunchedEffect(settings.hideCompleted, active.item.id, active.currentCount) {
+        if (settings.hideCompleted && active.currentCount >= active.item.count) {
+            (nextTarget ?: previousTarget)?.let(controller::navigateTo)
+        }
+    }
+
+    val listVisibleIndices = resolvedEntries.indices.filter { index ->
+        !settings.hideCompleted ||
+            resolvedEntries[index].currentCount < resolvedEntries[index].item.count ||
+            index == activeIndex
+    }
+    val activeListIndex = listVisibleIndices.indexOf(activeIndex).coerceAtLeast(0)
+
     val shellScrollState = rememberScrollState()
     val readingScrollState = remember(navigation.generation, readerUi.viewMode) { ScrollState(0) }
     val listState = rememberLazyListState()
@@ -132,7 +183,7 @@ fun AzkarReaderScreen(
     LaunchedEffect(readerUi.viewMode) {
         if (readerUi.viewMode == AzkarReaderViewMode.List) {
             listState.animateScrollToItem(
-                index = AzkarListCardStartIndex + activeIndex,
+                index = AzkarListCardStartIndex + activeListIndex,
                 scrollOffset = -listScrollMarginPx,
             )
         }
@@ -223,7 +274,7 @@ fun AzkarReaderScreen(
             readerUi.viewMode == AzkarReaderViewMode.Cards &&
             readerUi.activeSheet == AzkarReaderSheet.None
         ) {
-            controller.previous()
+            previousTarget?.let(controller::navigateTo)
         }
         Unit
     }
@@ -232,7 +283,7 @@ fun AzkarReaderScreen(
             readerUi.viewMode == AzkarReaderViewMode.Cards &&
             readerUi.activeSheet == AzkarReaderSheet.None
         ) {
-            controller.next()
+            nextTarget?.let(controller::navigateTo)
         }
         Unit
     }
@@ -268,7 +319,9 @@ fun AzkarReaderScreen(
                         readingAreaModifier = gestureModifier,
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
+                        onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onOpenExplanation = resolvedUiController::openExplanation,
+                        onOpenActions = resolvedUiController::openActions,
                         onIncrementCount = { itemId, target ->
                             resolvedUiController.incrementProgress(itemId, target)
                         },
@@ -280,6 +333,8 @@ fun AzkarReaderScreen(
                         showTranslation = settings.showTranslation,
                         showSources = settings.showSources,
                         showNotes = settings.showNotes,
+                        canPrevious = previousTarget != null,
+                        canNext = nextTarget != null,
                     )
                 }
 
@@ -293,6 +348,7 @@ fun AzkarReaderScreen(
                         modifier = Modifier.fillMaxSize(),
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
+                        onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onIncrementCount = { itemId, target ->
                             resolvedUiController.incrementProgress(itemId, target)
                         },
@@ -300,6 +356,11 @@ fun AzkarReaderScreen(
                             resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
                         },
                         onPeriodChange = onPeriodChange,
+                        hideCompleted = settings.hideCompleted,
+                        onOpenActions = { index, itemId ->
+                            controller.selectAnchor(index)
+                            resolvedUiController.openActions(itemId)
+                        },
                         onOpenExplanation = { index, itemId ->
                             controller.selectAnchor(index)
                             resolvedUiController.openExplanation(itemId)
@@ -313,9 +374,13 @@ fun AzkarReaderScreen(
                 entries = resolvedEntries,
                 activeIndex = activeIndex,
                 selectedExplanationId = readerUi.selectedExplanationId,
+                selectedActionId = readerUi.selectedActionId,
                 settings = settings,
                 viewMode = readerUi.viewMode,
                 onDismiss = { resolvedUiController.closeSheet() },
+                onResetSettings = {
+                    resolvedUiController.updateSettings { AzkarReaderSettings() }
+                },
                 onSelectContents = { index ->
                     when (readerUi.viewMode) {
                         AzkarReaderViewMode.Cards -> {
@@ -332,7 +397,8 @@ fun AzkarReaderScreen(
                             resolvedUiController.closeSheet()
                             scope.launch {
                                 listState.animateScrollToItem(
-                                    index = AzkarListCardStartIndex + index,
+                                    index = AzkarListCardStartIndex +
+                                        listVisibleIndices.indexOf(index).coerceAtLeast(0),
                                     scrollOffset = -listScrollMarginPx,
                                 )
                             }
