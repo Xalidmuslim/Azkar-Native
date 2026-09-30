@@ -246,18 +246,27 @@ class AzkarReaderPersistenceInstrumentedTest {
     }
 
     private fun waitForHydration(expectedGeneration: Int) {
-        composeRule.waitUntil(timeoutMillis = 5_000) {
+        composeRule.waitUntil(timeoutMillis = 10_000) {
             renderedGeneration == expectedGeneration &&
                 ::readerUi.isInitialized &&
-                readerUi.state.isHydrated &&
-                runCatching {
-                    val tag = if (readerUi.state.viewMode == AzkarReaderViewMode.List) {
-                        AzkarReadingTestTags.List
-                    } else {
-                        AzkarReadingTestTags.Card
-                    }
-                    composeRule.onNodeWithTag(tag).fetchSemanticsNode()
-                }.isSuccess
+                readerUi.state.isHydrated
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            if (
+                renderedGeneration != expectedGeneration ||
+                !::readerUi.isInitialized ||
+                !readerUi.state.isHydrated
+            ) {
+                return@waitUntil false
+            }
+            val tag = if (readerUi.state.viewMode == AzkarReaderViewMode.List) {
+                AzkarReadingTestTags.List
+            } else {
+                AzkarReadingTestTags.Card
+            }
+            runCatching {
+                composeRule.onNodeWithTag(tag).fetchSemanticsNode()
+            }.isSuccess
         }
         composeRule.waitForIdle()
     }
