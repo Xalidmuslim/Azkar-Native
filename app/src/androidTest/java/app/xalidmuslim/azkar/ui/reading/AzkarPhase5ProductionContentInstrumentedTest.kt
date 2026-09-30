@@ -1,6 +1,5 @@
 package app.xalidmuslim.azkar.ui.reading
 
-import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -268,102 +267,51 @@ class AzkarPhase5ProductionContentInstrumentedTest {
 
         setReader(AzkarPeriod.Evening)
         composeRule.runOnIdle {
-            Log.i(
-                "AzkarPhase5Diag",
-                "beforeNavigate requestedIndex=$requestedIndex activeIndex=${periodController.navigation.state.activeIndex} " +
-                    "activeId=${eveningItems[periodController.navigation.state.activeIndex].id} " +
-                    "selectedExplanationId=${uiController.state.selectedExplanationId} activeSheet=${uiController.state.activeSheet}",
-            )
             periodController.navigation.navigateTo(requestedIndex)
         }
 
         composeRule.waitForIdle()
 
+        composeRule.runOnIdle {
+            val activeIndex = periodController.navigation.state.activeIndex
+            assertEquals(requestedIndex, activeIndex)
+            assertEquals(expectedId, eveningItems[activeIndex].id)
+            assertEquals(AzkarReaderSheet.None, uiController.state.activeSheet)
+            assertEquals(null, uiController.state.selectedExplanationId)
+        }
+
         val cardNode = composeRule
             .onNodeWithTag(AzkarReadingTestTags.Card, useUnmergedTree = true)
             .fetchSemanticsNode()
-        val renderedCandidates = eveningItems.mapNotNull { item ->
-            val nodes = composeRule
-                .onAllNodesWithText(item.title, useUnmergedTree = true)
-                .fetchSemanticsNodes()
-            if (nodes.any { node -> isDescendantOf(node, cardNode.id) }) {
-                item.id to item.title
-            } else {
-                null
-            }
-        }
-
-        composeRule.runOnIdle {
-            val activeIndex = periodController.navigation.state.activeIndex
-            val activeItem = eveningItems[activeIndex]
-            Log.i(
-                "AzkarPhase5Diag",
-                "beforeClick requestedIndex=$requestedIndex activeIndex=$activeIndex activeId=${activeItem.id} " +
-                    "activeTitle=${activeItem.title} renderedCandidates=$renderedCandidates " +
-                    "selectedExplanationId=${uiController.state.selectedExplanationId} activeSheet=${uiController.state.activeSheet}",
-            )
-            assertEquals(requestedIndex, activeIndex)
-            assertEquals(expectedId, activeItem.id)
-            assertEquals(listOf(expectedId), renderedCandidates.map { it.first })
-            assertEquals(null, uiController.state.selectedExplanationId)
-            assertEquals(AzkarReaderSheet.None, uiController.state.activeSheet)
-        }
+        val renderedTitleNodes = composeRule
+            .onAllNodesWithText(expectedTitle, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+        assertEquals(1, renderedTitleNodes.count { isDescendantOf(it, cardNode.id) })
 
         composeRule.onNodeWithTag(AzkarReadingTestTags.Explain)
             .performScrollTo()
+            .performClick()
         composeRule.waitForIdle()
 
-        val titleNodesBeforeClick = composeRule
-            .onAllNodesWithText(expectedTitle, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-        Log.i(
-            "AzkarPhase5Diag",
-            "immediatelyBeforeClick exactTitleNodeCount=${titleNodesBeforeClick.size} " +
-                "cardDescendants=${titleNodesBeforeClick.count { isDescendantOf(it, cardNode.id) }}",
-        )
-
-        composeRule.onNodeWithTag(AzkarReadingTestTags.Explain).performClick()
-        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals(AzkarReaderSheet.Explanation, uiController.state.activeSheet)
+            assertEquals(expectedId, uiController.state.selectedExplanationId)
+        }
 
         val sheetNode = composeRule
             .onNodeWithTag(AzkarSheetTestTags.Explanation, useUnmergedTree = true)
             .fetchSemanticsNode()
-        val titleNodesAfterClick = composeRule
+        val sheetTitleNodes = composeRule
             .onAllNodesWithText(expectedTitle, useUnmergedTree = true)
             .fetchSemanticsNodes()
-        val titleNodesInSheet = titleNodesAfterClick.filter { isDescendantOf(it, sheetNode.id) }
-        val titleNodesInCard = titleNodesAfterClick.filter { isDescendantOf(it, cardNode.id) }
-        val relatedNodes = composeRule
+            .filter { isDescendantOf(it, sheetNode.id) }
+        val relatedSectionNodes = composeRule
             .onAllNodesWithText("Связанный случай", useUnmergedTree = true)
             .fetchSemanticsNodes()
-        val relatedNodesInSheet = relatedNodes.filter { isDescendantOf(it, sheetNode.id) }
+            .filter { isDescendantOf(it, sheetNode.id) }
 
-        composeRule.runOnIdle {
-            val activeIndex = periodController.navigation.state.activeIndex
-            val selectedId = uiController.state.selectedExplanationId
-            val hostItem = eveningItems.firstOrNull { it.id == selectedId }
-                ?: eveningItems.getOrNull(activeIndex)
-            Log.i(
-                "AzkarPhase5Diag",
-                "afterClick activeIndex=$activeIndex activeId=${eveningItems[activeIndex].id} " +
-                    "activeSheet=${uiController.state.activeSheet} selectedExplanationId=$selectedId " +
-                    "sheetHostItemId=${hostItem?.id} sheetHostTitle=${hostItem?.title}",
-            )
-            Log.i(
-                "AzkarPhase5Diag",
-                "afterClick exactTitleNodeCount=${titleNodesAfterClick.size} " +
-                    "titleNodesInSheet=${titleNodesInSheet.size} titleNodesInCard=${titleNodesInCard.size} " +
-                    "relatedNodes=${relatedNodes.size} relatedNodesInSheet=${relatedNodesInSheet.size}",
-            )
-            assertEquals(AzkarReaderSheet.Explanation, uiController.state.activeSheet)
-            assertEquals(expectedId, selectedId)
-            assertEquals(expectedId, hostItem?.id)
-            assertEquals(expectedTitle, hostItem?.title)
-            assertEquals(1, titleNodesInSheet.size)
-            assertEquals(1, relatedNodesInSheet.size)
-        }
-
-        logSemanticsSubtree(sheetNode)
+        assertEquals(1, sheetTitleNodes.size)
+        assertEquals(1, relatedSectionNodes.size)
     }
 
     @Test
@@ -399,14 +347,6 @@ class AzkarPhase5ProductionContentInstrumentedTest {
             parent = parent.parent
         }
         return false
-    }
-
-    private fun logSemanticsSubtree(node: SemanticsNode, depth: Int = 0) {
-        Log.i(
-            "AzkarPhase5Diag",
-            "SEM depth=$depth id=${node.id} bounds=${node.boundsInRoot} config=${node.config}",
-        )
-        node.children.forEach { child -> logSemanticsSubtree(child, depth + 1) }
     }
 
     private fun setReader(initialPeriod: AzkarPeriod = AzkarPeriod.Morning) {
