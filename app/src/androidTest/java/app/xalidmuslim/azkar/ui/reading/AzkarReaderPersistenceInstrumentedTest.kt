@@ -71,7 +71,8 @@ class AzkarReaderPersistenceInstrumentedTest {
     private var renderedGeneration: Int = -1
 
 
-    // Test-only synchronization: completion means the delegated DataStore reset write returned.\n    private class ResetTracingRepository(
+    // Test-only synchronization: completion means the delegated DataStore reset write returned.
+    private class ResetTracingRepository(
         private val delegate: DataStoreAzkarPreferencesRepository,
         private val snapshotIds: Set<String>,
     ) : AzkarPreferencesRepository {
