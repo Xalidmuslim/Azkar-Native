@@ -1,0 +1,84 @@
+name: Azkar Phase 4 Reset Diagnostic
+
+on:
+  push:
+    branches:
+      - azkar-native-phase4-reset-diagnostic-2026-09-30
+
+jobs:
+  reset-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Compile instrumentation APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+
+      - name: Prepare targeted reset runner
+        shell: bash
+        run: |
+          mkdir -p phase4-reset-diagnostic
+          cat > phase4-reset-diagnostic.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APP_PACKAGE="app.xalidmuslim.azkar"
+          TEST_PACKAGE="app.xalidmuslim.azkar.test"
+          TEST_COMPONENT="$TEST_PACKAGE/androidx.test.runner.AndroidJUnitRunner"
+          TEST_METHOD="app.xalidmuslim.azkar.ui.reading.AzkarReaderPersistenceInstrumentedTest#resetClearsCurrentVisibleEntries"
+
+          adb wait-for-device
+          adb install -r app/build/outputs/apk/debug/app-debug.apk
+          adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          adb shell wm size 393x873
+          adb shell wm density 160
+          adb shell settings put system font_scale 1.0
+          timeout 15s adb shell am wait-for-broadcast-idle || true
+          adb logcat -c || true
+
+          set +e
+          adb shell am instrument -w -r -e class "$TEST_METHOD" "$TEST_COMPONENT" | tee phase4-reset-diagnostic/instrumentation.txt
+          CODE=${PIPESTATUS[0]}
+          set -e
+
+          adb logcat -d -v threadtime > phase4-reset-diagnostic/logcat.txt || true
+          grep 'AzkarPhase4Reset' phase4-reset-diagnostic/logcat.txt > phase4-reset-diagnostic/reset-markers.txt || true
+          if [ "$CODE" -ne 0 ]; then exit "$CODE"; fi
+          grep -q "OK (1 test)" phase4-reset-diagnostic/instrumentation.txt
+          EOF
+          chmod +x phase4-reset-diagnostic.sh
+
+      - name: Enable KVM
+        run: |
+          sudo chmod 666 /dev/kvm
+          echo "KVM WORKING" | tee phase4-reset-diagnostic/kvm.txt
+
+      - name: Run targeted reset diagnostic
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash phase4-reset-diagnostic.sh
+
+      - name: Upload reset diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: azkar-phase4-reset-diagnostic
+          path: phase4-reset-diagnostic/**
+          if-no-files-found: warn
+          retention-days: 7
