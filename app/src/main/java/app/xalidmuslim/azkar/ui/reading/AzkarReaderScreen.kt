@@ -206,8 +206,17 @@ fun AzkarReaderScreen(
         (activeIndex + 1).takeIf { it < resolvedEntries.size }
     }
 
-    LaunchedEffect(settings.hideCompleted, active.item.id, active.currentCount) {
-        if (settings.hideCompleted && active.currentCount >= active.item.count) {
+    LaunchedEffect(
+        settings.hideCompleted,
+        active.item.id,
+        active.currentCount,
+        readerUi.activeSheet,
+    ) {
+        if (
+            settings.hideCompleted &&
+            active.currentCount >= active.item.count &&
+            readerUi.activeSheet == AzkarReaderSheet.None
+        ) {
             delay(600)
             (nextTarget ?: previousTarget)?.let(controller::navigateTo)
         }
