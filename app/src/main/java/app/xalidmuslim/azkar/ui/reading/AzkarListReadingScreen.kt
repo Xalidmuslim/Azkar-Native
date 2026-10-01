@@ -41,6 +41,7 @@ internal fun AzkarListReadingScreen(
     isDarkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
     onOpenContents: () -> Unit,
+    onViewModeChange: (AzkarReaderViewMode) -> Unit,
     onOpenSourceInfo: () -> Unit,
     onIncrementCount: (String, Int) -> Unit,
     onResetProgress: () -> Unit,
@@ -100,7 +101,9 @@ internal fun AzkarListReadingScreen(
                         state = summaryState,
                         narrow = narrow,
                         onOpenContents = onOpenContents,
-                        positionText = "Список",
+                        viewMode = AzkarReaderViewMode.List,
+                        onViewModeChange = onViewModeChange,
+                        positionText = "${summaryState.position} из ${summaryState.total}",
                     )
                 }
 
