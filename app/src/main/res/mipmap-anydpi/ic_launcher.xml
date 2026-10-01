@@ -5,12 +5,12 @@
         </shape>
     </item>
     <item
-        android:left="7dp"
-        android:top="7dp"
-        android:right="7dp"
-        android:bottom="7dp">
+        android:left="6dp"
+        android:top="6dp"
+        android:right="6dp"
+        android:bottom="6dp">
         <bitmap
-            android:src="@drawable/azkar_launcher_art"
+            android:src="@drawable/azkar_launcher_exact"
             android:gravity="fill"
             android:antialias="true"
             android:filter="true" />
