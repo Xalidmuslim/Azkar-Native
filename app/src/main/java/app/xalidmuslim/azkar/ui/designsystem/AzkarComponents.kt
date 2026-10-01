@@ -31,7 +31,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -312,6 +315,12 @@ fun AzkarProgressBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .semantics {
+                progressBarRangeInfo = ProgressBarRangeInfo(
+                    current = displayed,
+                    range = 0f..1f,
+                )
+            }
             .height(AzkarDimensions.progressTrackHeight)
             .clip(RoundedCornerShape(AzkarRadius.pill))
             .background(colors.surface),
