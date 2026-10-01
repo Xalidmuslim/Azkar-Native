@@ -44,6 +44,7 @@ data class AzkarReaderSettings(
     val lineHeight: Float = AzkarDimensions.defaultReaderLineHeight,
     val readerStyle: AzkarReaderStyle = AzkarReaderStyle.Book,
     val showTranslation: Boolean = true,
+    val showTransliteration: Boolean = false,
     val showSources: Boolean = true,
     val showNotes: Boolean = true,
     val hideCompleted: Boolean = false,
