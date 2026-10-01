@@ -942,8 +942,20 @@ private fun AzkarSizeSettings(
     settings: AzkarReaderSettings,
     update: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
 ) {
+    val colors = AzkarThemeValues.colors
+    val shape = RoundedCornerShape(AzkarRadius.control)
     AzkarSettingsSection("Размер и интервал") {
-        Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.controlGap)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(colors.surface)
+                .border(AzkarBorders.thin, colors.border, shape)
+                .padding(
+                    horizontal = AzkarSpacing.controlHorizontal,
+                    vertical = 4.dp,
+                ),
+        ) {
             AzkarValueControl(
                 label = "Арабский",
                 valueLabel = settings.arabicSizeSp.roundToInt().toString(),
@@ -953,6 +965,7 @@ private fun AzkarSizeSettings(
                 step = AzkarDimensions.arabicSizeStepSp,
                 onValueChange = { v -> update { it.copy(arabicSizeSp = v) } },
             )
+            AzkarControlDivider()
             AzkarValueControl(
                 label = "Русский",
                 valueLabel = settings.russianSizeSp.roundToInt().toString(),
@@ -962,6 +975,7 @@ private fun AzkarSizeSettings(
                 step = AzkarDimensions.russianSizeStepSp,
                 onValueChange = { v -> update { it.copy(russianSizeSp = v) } },
             )
+            AzkarControlDivider()
             AzkarValueControl(
                 label = "Межстрочный",
                 valueLabel = String.format("%.2f", settings.lineHeight),
@@ -976,6 +990,16 @@ private fun AzkarSizeSettings(
 }
 
 @Composable
+private fun AzkarControlDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(AzkarBorders.thin)
+            .background(AzkarThemeValues.colors.border),
+    )
+}
+
+@Composable
 private fun AzkarValueControl(
     label: String,
     valueLabel: String,
@@ -986,19 +1010,12 @@ private fun AzkarValueControl(
     onValueChange: (Float) -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
-    val shape = RoundedCornerShape(AzkarRadius.control)
     val fraction = ((value - min) / (max - min)).coerceIn(0f, 1f)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(colors.surface)
-            .border(AzkarBorders.thin, colors.border, shape)
-            .padding(
-                horizontal = AzkarSpacing.controlHorizontal,
-                vertical = AzkarSpacing.controlVertical,
-            ),
-        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.controlGap),
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1032,7 +1049,7 @@ private fun AzkarValueControl(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(24.dp)
+                .height(20.dp)
                 .pointerInput(min, max, step) {
                     fun valueFor(x: Float): Float {
                         val raw = (x / size.width).coerceIn(0f, 1f)
@@ -1054,7 +1071,7 @@ private fun AzkarValueControl(
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(RoundedCornerShape(AzkarRadius.pill))
-                    .background(colors.surface),
+                    .background(colors.border),
             )
             Box(
                 modifier = Modifier
