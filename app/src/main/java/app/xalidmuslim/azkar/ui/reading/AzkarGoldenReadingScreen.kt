@@ -155,7 +155,10 @@ fun AzkarGoldenReadingScreen(
                 )
                 .padding(horizontal = AzkarSpacing.shellHorizontal)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                .padding(bottom = AzkarSpacing.shellBottomBase)
+                .padding(
+                    bottom = AzkarSpacing.shellBottomBase +
+                        AzkarDimensions.fixedPagerContentReserve,
+                )
                 .then(
                     if (shellScrollState != null) Modifier.verticalScroll(shellScrollState)
                     else Modifier,
@@ -184,6 +187,25 @@ fun AzkarGoldenReadingScreen(
                         onIncrementCount(state.item.id, state.item.count)
                     },
                 )
+                AzkarFooter()
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .widthIn(max = AzkarDimensions.shellMaxWidth)
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                        ),
+                    )
+                    .padding(
+                        start = AzkarSpacing.shellHorizontal,
+                        end = AzkarSpacing.shellHorizontal,
+                        bottom = AzkarSpacing.fixedPagerBottom,
+                    ),
+            ) {
                 AzkarPager(
                     state = state,
                     narrow = narrow,
@@ -191,8 +213,8 @@ fun AzkarGoldenReadingScreen(
                     onNext = onNext,
                     canPrevious = canPrevious,
                     canNext = canNext,
+                    fixed = true,
                 )
-                AzkarFooter()
             }
         }
     }
@@ -922,13 +944,17 @@ private fun AzkarPager(
     onNext: () -> Unit,
     canPrevious: Boolean = state.position > 1,
     canNext: Boolean = state.position < state.total,
+    fixed: Boolean = false,
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.pager)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = AzkarSpacing.pagerTop)
+            .then(
+                if (fixed) Modifier.azkarShadow(AzkarElevation.BottomSheet, AzkarRadius.pager)
+                else Modifier.padding(top = AzkarSpacing.pagerTop),
+            )
             .clip(shape)
             .background(colors.card)
             .border(AzkarBorders.thin, colors.border, shape)
