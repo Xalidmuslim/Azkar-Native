@@ -31,6 +31,12 @@ interface AzkarPreferencesRepository {
         target: Int,
     ): Int
 
+    suspend fun decrementProgress(
+        date: LocalDate,
+        stableDhikrId: String,
+        target: Int,
+    ): Int
+
     suspend fun resetProgress(
         date: LocalDate,
         visibleItemIds: Set<String>,
