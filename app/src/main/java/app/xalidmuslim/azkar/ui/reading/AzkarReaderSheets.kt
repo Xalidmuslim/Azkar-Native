@@ -720,9 +720,25 @@ private fun AzkarActionsSheet(
                 },
             )
             AzkarOutlineButton(
-                text = "Копировать источник",
+                text = "Копировать целиком",
                 onClick = {
-                    clipboard.setText(AnnotatedString(item.source))
+                    val completeText = buildString {
+                        appendLine(item.title)
+                        appendLine()
+                        appendLine(item.arabic)
+                        if (item.transliteration.isNotBlank()) {
+                            appendLine()
+                            appendLine(item.transliteration)
+                        }
+                        appendLine()
+                        appendLine(item.translation)
+                        if (item.source.isNotBlank()) {
+                            appendLine()
+                            append("Источник: ")
+                            append(item.source)
+                        }
+                    }
+                    clipboard.setText(AnnotatedString(completeText.trim()))
                     onDismiss()
                 },
             )
@@ -791,7 +807,6 @@ private fun AzkarSettingsSheet(
                 AzkarFontSettings(settings, onUpdateSettings)
                 AzkarSizeSettings(settings, onUpdateSettings)
                 AzkarViewModeSettings(viewMode, onViewModeChange)
-                AzkarStyleSettings(settings, onUpdateSettings)
                 AzkarVisibilitySettings(settings, onUpdateSettings)
                 AzkarReadingBehaviorSettings(settings, onUpdateSettings)
                 AzkarThemeSettings(settings, onUpdateSettings)
@@ -856,7 +871,6 @@ private fun AzkarFontSettings(
 ) {
     AzkarSettingsSection("Русский шрифт") {
         val options = listOf(
-            RussianFontFamily.LITERATA to "Книжный",
             RussianFontFamily.PT_SERIF to "Классика",
             RussianFontFamily.INTER to "Современный",
         )
@@ -947,6 +961,7 @@ private fun AzkarFontTile(
         )
         BasicText(
             text = sample,
+            modifier = Modifier.padding(bottom = 2.dp),
             style = AzkarThemeValues.typography.arabicFontTileSample.copy(
                 color = colors.muted,
                 fontFamily = fontFamily,
@@ -1163,29 +1178,6 @@ private fun AzkarViewModeSettings(
                 active = viewMode == AzkarReaderViewMode.List,
                 modifier = Modifier.weight(1f),
                 onClick = { onViewModeChange(AzkarReaderViewMode.List) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun AzkarStyleSettings(
-    settings: AzkarReaderSettings,
-    update: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
-) {
-    AzkarSettingsSection("Стиль чтения") {
-        Row(horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.styleGridGap)) {
-            AzkarChoiceTile(
-                text = "Книжный",
-                active = settings.readerStyle == AzkarReaderStyle.Book,
-                modifier = Modifier.weight(1f),
-                onClick = { update { it.copy(readerStyle = AzkarReaderStyle.Book) } },
-            )
-            AzkarChoiceTile(
-                text = "Компактный",
-                active = settings.readerStyle == AzkarReaderStyle.Compact,
-                modifier = Modifier.weight(1f),
-                onClick = { update { it.copy(readerStyle = AzkarReaderStyle.Compact) } },
             )
         }
     }
