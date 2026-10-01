@@ -48,6 +48,10 @@ data class AzkarReaderSettings(
     val showSources: Boolean = true,
     val showNotes: Boolean = true,
     val hideCompleted: Boolean = false,
+    val morningReminderEnabled: Boolean = false,
+    val morningReminderMinutes: Int = 7 * 60,
+    val eveningReminderEnabled: Boolean = false,
+    val eveningReminderMinutes: Int = 18 * 60,
     val themeMode: AzkarThemeMode = AzkarThemeMode.System,
 )
 
