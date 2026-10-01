@@ -132,7 +132,7 @@ internal fun AzkarReaderSheetHost(
                     durationMillis = AzkarMotion.sheetDurationMillis,
                     easing = AzkarMotion.sheetEasing,
                 ),
-                initialOffsetY = { (it * 0.08f).roundToInt().coerceAtLeast(1) },
+                initialOffsetY = { (it * 0.02f).roundToInt().coerceAtLeast(1) },
             ),
         exit = fadeOut(tween(AzkarMotion.sheetDurationMillis)) +
             slideOutVertically(
@@ -140,7 +140,7 @@ internal fun AzkarReaderSheetHost(
                     durationMillis = AzkarMotion.sheetDurationMillis,
                     easing = AzkarMotion.sheetEasing,
                 ),
-                targetOffsetY = { (it * 0.08f).roundToInt().coerceAtLeast(1) },
+                targetOffsetY = { (it * 0.02f).roundToInt().coerceAtLeast(1) },
             ),
     ) {
         when (activeSheet) {
@@ -647,7 +647,18 @@ private fun AzkarInsightSection(
                 style = AzkarThemeValues.typography.sectionHeading.copy(color = colors.muted),
             )
         }
-        AnimatedVisibility(visible = expanded) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(AzkarMotion.toggleDurationMillis)) +
+                slideInVertically(
+                    animationSpec = tween(
+                        durationMillis = AzkarMotion.toggleDurationMillis,
+                        easing = AzkarMotion.sheetEasing,
+                    ),
+                    initialOffsetY = { (-it * 0.02f).roundToInt() },
+                ),
+            exit = fadeOut(tween(AzkarMotion.toggleDurationMillis)),
+        ) {
             Box(modifier = Modifier.padding(top = 2.dp)) {
                 content()
             }
@@ -913,6 +924,7 @@ private fun AzkarFontSettings(
             RussianFontFamily.LITERATA to "Книжный",
             RussianFontFamily.PT_SERIF to "Классика",
             RussianFontFamily.INTER to "Современный",
+            RussianFontFamily.ANDROID_SANS to "Компактный",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
             options.chunked(2).forEach { row ->
@@ -937,6 +949,7 @@ private fun AzkarFontSettings(
         val options = listOf(
             ArabicFontFamily.NOTO_NASKH_ARABIC to "Чёткий",
             ArabicFontFamily.NOTO_SANS_ARABIC to "Османский",
+            ArabicFontFamily.AMIRI to "Мусхаф",
             ArabicFontFamily.SCHEHERAZADE_NEW to "Каллиграфический",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
