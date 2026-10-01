@@ -37,7 +37,7 @@ enum class AzkarReaderViewMode {
 }
 
 data class AzkarReaderSettings(
-    val russianFontFamily: RussianFontFamily = RussianFontFamily.PT_SERIF,
+    val russianFontFamily: RussianFontFamily = RussianFontFamily.ANDROID_SANS,
     val arabicFontFamily: ArabicFontFamily = ArabicFontFamily.NOTO_SANS_ARABIC,
     val arabicSizeSp: Float = AzkarDimensions.defaultArabicSizeSp,
     val russianSizeSp: Float = AzkarDimensions.defaultRussianSizeSp,
