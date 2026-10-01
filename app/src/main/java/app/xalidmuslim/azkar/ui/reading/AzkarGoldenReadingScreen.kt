@@ -58,6 +58,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -729,7 +730,7 @@ internal fun AzkarDhikrCard(
                 )
             } else {
                 BasicText(
-                    text = item.arabic,
+                    text = compactVerseMarkers(item.arabic),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
@@ -885,6 +886,28 @@ internal fun AzkarDhikrCard(
 }
 
 @Composable
+private fun compactVerseMarkers(text: String): AnnotatedString {
+    val arabicSize = AzkarThemeValues.typography.arabicBody.fontSize.value
+    val markerSize = (arabicSize * 0.56f).sp
+    return buildAnnotatedString {
+        text.forEach { character ->
+            if (character == '۝') {
+                pushStyle(
+                    SpanStyle(
+                        fontSize = markerSize,
+                        baselineShift = BaselineShift(0.12f),
+                    ),
+                )
+                append(character)
+                pop()
+            } else {
+                append(character)
+            }
+        }
+    }
+}
+
+@Composable
 private fun AzkarMuawwidhatText(
     item: AzkarReadingItem,
     showTranslation: Boolean,
@@ -906,7 +929,7 @@ private fun AzkarMuawwidhatText(
 
     if (arabicParts.size != 3 || translationParts.size != 3) {
         BasicText(
-            text = item.arabic,
+            text = compactVerseMarkers(item.arabic),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
@@ -958,7 +981,7 @@ private fun AzkarMuawwidhatText(
                 ),
             )
             BasicText(
-                text = arabicParts[index],
+                text = compactVerseMarkers(arabicParts[index]),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = if (showTranslation) 6.dp else 8.dp)
