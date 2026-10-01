@@ -10,6 +10,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +34,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 
 internal fun Modifier.azkarShadow(
     layers: List<AzkarShadowLayer>,
@@ -319,5 +323,56 @@ fun AzkarProgressBar(
                 .clip(RoundedCornerShape(AzkarRadius.pill))
                 .background(colors.primary),
         )
+    }
+}
+
+
+@Composable
+fun AzkarConfirmDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = AzkarThemeValues.colors
+    val shape = RoundedCornerShape(18.dp)
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(colors.card)
+                .border(AzkarBorders.thin, colors.border, shape)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            BasicText(
+                text = title,
+                style = AzkarThemeValues.typography.sheetTitle.copy(color = colors.foreground),
+            )
+            BasicText(
+                text = message,
+                style = AzkarThemeValues.typography.sheetSubtitle.copy(color = colors.muted),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AzkarOutlineButton(
+                    text = "Отмена",
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                )
+                AzkarPrimaryButton(
+                    text = confirmText,
+                    onClick = {
+                        onConfirm()
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
