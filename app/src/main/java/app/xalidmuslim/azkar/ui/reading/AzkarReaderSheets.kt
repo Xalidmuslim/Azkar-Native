@@ -1125,7 +1125,7 @@ private fun AzkarSwitchIndicator(checked: Boolean) {
         label = "switch-thumb",
     ).value
     val thumbOffset = animateDpAsState(
-        targetValue = if (checked) AzkarDimensions.switchCheckedLeft
+        targetValue = if (checked) AzkarSpacing.switchCheckedLeft
             else AzkarSpacing.switchThumbInset,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "switch-thumb-offset",
