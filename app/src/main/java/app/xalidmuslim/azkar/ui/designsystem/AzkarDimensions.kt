@@ -220,6 +220,7 @@ object AzkarDimensions {
     const val disabledControlAlpha = 0.38f
     const val defaultArabicSizeSp = 32f
     const val defaultRussianSizeSp = 17f
+    const val defaultTransliterationSizeSp = 16f
     const val defaultReaderLineHeight = 1.65f
     const val arabicSizeMinSp = 22f
     const val arabicSizeMaxSp = 44f
@@ -227,6 +228,9 @@ object AzkarDimensions {
     const val russianSizeMinSp = 13f
     const val russianSizeMaxSp = 25f
     const val russianSizeStepSp = 1f
+    const val transliterationSizeMinSp = 12f
+    const val transliterationSizeMaxSp = 24f
+    const val transliterationSizeStepSp = 1f
     const val lineHeightMin = 1.25f
     const val lineHeightMax = 2.00f
     const val lineHeightStep = 0.05f
