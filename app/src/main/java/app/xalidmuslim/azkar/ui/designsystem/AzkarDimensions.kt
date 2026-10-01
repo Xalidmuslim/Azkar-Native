@@ -56,7 +56,6 @@ object AzkarSpacing {
     val pagerPadding = 8.dp
     val pagerCenterHorizontalGap = 4.dp
     val pagerHelperTop = 2.dp
-    val fixedPagerBottom = 4.dp
     val footerTop = 18.dp
     val footerHorizontal = 8.dp
     val footerBottom = 4.dp
@@ -186,7 +185,7 @@ object AzkarDimensions {
     val readingToolbarBackdropBlur = 12.dp
     val toolbarButtonMinHeight = 44.dp
     val dhikrScrollMarginTop = 62.dp
-    val pagedViewportReservedHeight = 172.dp
+    val pagedViewportReservedHeight = 104.dp
     val numberChip = 29.dp
     val doneMarker = 28.dp
     val explainButtonMinHeight = 40.dp
@@ -194,7 +193,6 @@ object AzkarDimensions {
     val countButtonMinHeight = 48.dp
     val pagerButtonMinHeight = 44.dp
     val pagerCenterMinWidth = 70.dp
-    val fixedPagerContentReserve = 68.dp
     val sheetMaxWidth = 760.dp
     const val sheetMaxHeightFraction = 0.82f
     const val insightSheetMaxHeightFraction = 0.84f
