@@ -68,6 +68,7 @@ import app.xalidmuslim.azkar.ui.designsystem.AzkarCardSurface
 import app.xalidmuslim.azkar.ui.designsystem.AzkarConfirmDialog
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarElevation
+import app.xalidmuslim.azkar.ui.designsystem.AzkarFontFamilies
 import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
 import app.xalidmuslim.azkar.ui.designsystem.AzkarIconButton
 import app.xalidmuslim.azkar.ui.designsystem.AzkarIconButtonSize
@@ -155,10 +156,7 @@ fun AzkarGoldenReadingScreen(
                 )
                 .padding(horizontal = AzkarSpacing.shellHorizontal)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                .padding(
-                    bottom = AzkarSpacing.shellBottomBase +
-                        AzkarDimensions.fixedPagerContentReserve,
-                )
+                .padding(bottom = AzkarSpacing.shellBottomBase)
                 .then(
                     if (shellScrollState != null) Modifier.verticalScroll(shellScrollState)
                     else Modifier,
@@ -189,32 +187,6 @@ fun AzkarGoldenReadingScreen(
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .widthIn(max = AzkarDimensions.shellMaxWidth)
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
-                        ),
-                    )
-                    .padding(
-                        start = AzkarSpacing.shellHorizontal,
-                        end = AzkarSpacing.shellHorizontal,
-                        bottom = AzkarSpacing.fixedPagerBottom,
-                    ),
-            ) {
-                AzkarPager(
-                    state = state,
-                    narrow = narrow,
-                    onPrevious = onPrevious,
-                    onNext = onNext,
-                    canPrevious = canPrevious,
-                    canNext = canNext,
-                    fixed = true,
-                )
-            }
         }
     }
 }
@@ -519,19 +491,7 @@ internal fun AzkarReaderToolbar(
                 style = AzkarThemeValues.typography.toolbarPosition.copy(color = colors.muted),
             )
         }
-        AzkarIconButton(
-            onClick = onOpenSettings,
-            modifier = Modifier.testTag(AzkarReadingTestTags.OpenSettingsToolbar),
-            size = AzkarIconButtonSize.Compact,
-        ) {
-            BasicText(
-                text = "⚙",
-                style = AzkarThemeValues.typography.translation.copy(
-                    color = colors.foreground,
-                    fontSize = AzkarDimensions.compactIconGlyphSp.sp,
-                ),
-            )
-        }
+
     }
 }
 
@@ -687,7 +647,10 @@ internal fun AzkarDhikrCard(
             }
 
             BasicText(
-                text = item.arabic,
+                text = azkarArabicDisplayText(
+                    text = item.arabic,
+                    bodySizeSp = AzkarThemeValues.typography.arabicBody.fontSize.value,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
@@ -947,6 +910,26 @@ private fun AzkarCounterText(state: AzkarGoldenReadingUiState, completed: Boolea
             },
             style = AzkarThemeValues.typography.counter.copy(color = colors.muted),
         )
+    }
+}
+
+private fun azkarArabicDisplayText(
+    text: String,
+    bodySizeSp: Float,
+): AnnotatedString = buildAnnotatedString {
+    text.forEach { character ->
+        if (character == '،') {
+            pushStyle(
+                SpanStyle(
+                    fontFamily = AzkarFontFamilies.NotoNaskhArabic,
+                    fontSize = (bodySizeSp * 0.30f).coerceAtLeast(7f).sp,
+                ),
+            )
+            append(character)
+            pop()
+        } else {
+            append(character)
+        }
     }
 }
 
