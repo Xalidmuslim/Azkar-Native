@@ -840,7 +840,7 @@ private fun AzkarFontSettings(
             RussianFontFamily.LITERATA to "Книжный",
             RussianFontFamily.PT_SERIF to "Классика",
             RussianFontFamily.INTER to "Современный",
-            RussianFontFamily.ANDROID_SANS to "Аль-Фатиха",
+            RussianFontFamily.ANDROID_SANS to "Компактный",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
             options.chunked(2).forEach { row ->
