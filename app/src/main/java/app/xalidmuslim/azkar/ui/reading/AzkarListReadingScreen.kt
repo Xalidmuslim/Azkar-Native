@@ -46,6 +46,8 @@ internal fun AzkarListReadingScreen(
     hideCompleted: Boolean = false,
     onOpenActions: (Int, String) -> Unit,
     onOpenExplanation: (Int, String) -> Unit,
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
 ) {
     val selected = entries[activeIndex.coerceIn(entries.indices)]
     val completedItems = countCompletedItems(entries)
@@ -82,7 +84,11 @@ internal fun AzkarListReadingScreen(
             ) {
                 item(key = "reader-header") {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        AzkarHeader(onOpenSettings)
+                        AzkarHeader(
+                            onOpenSettings = onOpenSettings,
+                            isDarkTheme = isDarkTheme,
+                            onToggleTheme = onToggleTheme,
+                        )
                         AzkarSourceNote(onOpenSourceInfo)
                         AzkarPeriodTabs(period, onPeriodChange)
                         AzkarProgressCard(summaryState, onResetProgress)
