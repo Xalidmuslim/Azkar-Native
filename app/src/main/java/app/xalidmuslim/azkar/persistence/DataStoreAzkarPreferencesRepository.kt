@@ -118,12 +118,20 @@ class DataStoreAzkarPreferencesRepository(
                 preferences[AzkarPreferenceKeys.RussianFont],
                 RussianFontFamily.values(),
                 defaults.russianFontFamily,
-            ),
+            ).takeIf {
+                it == RussianFontFamily.LITERATA ||
+                    it == RussianFontFamily.PT_SERIF ||
+                    it == RussianFontFamily.INTER
+            } ?: defaults.russianFontFamily,
             arabicFontFamily = enumOrDefault(
                 preferences[AzkarPreferenceKeys.ArabicFont],
                 ArabicFontFamily.values(),
                 defaults.arabicFontFamily,
-            ),
+            ).takeIf {
+                it == ArabicFontFamily.NOTO_NASKH_ARABIC ||
+                    it == ArabicFontFamily.NOTO_SANS_ARABIC ||
+                    it == ArabicFontFamily.SCHEHERAZADE_NEW
+            } ?: defaults.arabicFontFamily,
             arabicSizeSp = validatedFloat(
                 preferences[AzkarPreferenceKeys.ArabicSize],
                 defaults.arabicSizeSp,
