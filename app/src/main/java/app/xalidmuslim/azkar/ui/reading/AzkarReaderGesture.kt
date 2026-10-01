@@ -47,7 +47,7 @@ internal fun Modifier.azkarHorizontalPaging(
         orientation = Orientation.Horizontal,
         enabled = enabled,
         startDragImmediately = false,
-        onDragStarted = {
+        onDragStarted = { _ ->
             totalDragPx = 0f
         },
         onDragStopped = { velocity ->
@@ -56,14 +56,14 @@ internal fun Modifier.azkarHorizontalPaging(
 
             val enoughDistance = abs(distance) >= thresholdPx
             val enoughVelocity = abs(velocity) >= flingVelocityThresholdPxPerSecond
-            if (!enoughDistance && !enoughVelocity) return@draggable
-
-            // Prefer actual finger displacement. Velocity is only a fallback for a very short fling.
-            val signedDirection = if (abs(distance) >= 4f) distance else velocity
-            if (signedDirection < 0f) {
-                latestNext()
-            } else {
-                latestPrevious()
+            if (enoughDistance || enoughVelocity) {
+                // Prefer actual finger displacement. Velocity is only a fallback for a very short fling.
+                val signedDirection = if (abs(distance) >= 4f) distance else velocity
+                if (signedDirection < 0f) {
+                    latestNext()
+                } else {
+                    latestPrevious()
+                }
             }
         },
     )
