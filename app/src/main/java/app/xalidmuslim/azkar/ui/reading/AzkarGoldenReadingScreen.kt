@@ -41,7 +41,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
@@ -951,110 +950,6 @@ private fun AzkarCountAction(
         modifier = modifier.testTag(AzkarReadingTestTags.CountActionPrefix + state.item.id),
         enabled = !completed,
     )
-}
-
-@Composable
-private fun AzkarPager(
-    state: AzkarGoldenReadingUiState,
-    narrow: Boolean,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    canPrevious: Boolean = state.position > 1,
-    canNext: Boolean = state.position < state.total,
-    fixed: Boolean = false,
-) {
-    val colors = AzkarThemeValues.colors
-    val shape = RoundedCornerShape(AzkarRadius.pager)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                if (fixed) Modifier.azkarShadow(AzkarElevation.BottomSheet, AzkarRadius.pager)
-                else Modifier.padding(top = AzkarSpacing.pagerTop),
-            )
-            .clip(shape)
-            .background(colors.card)
-            .border(AzkarBorders.thin, colors.border, shape)
-            .padding(AzkarSpacing.pagerPadding)
-            .testTag(AzkarReadingTestTags.Pager),
-        horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.pagerGap),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AzkarPagerButton(
-            text = "‹ Назад",
-            primary = false,
-            enabled = canPrevious,
-            modifier = Modifier.weight(1f),
-            testTag = AzkarReadingTestTags.Previous,
-            onClick = onPrevious,
-        )
-
-        Column(
-            modifier = Modifier.widthIn(min = AzkarDimensions.pagerCenterMinWidth),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(
-                    AzkarSpacing.pagerCenterHorizontalGap,
-                ),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                BasicText(
-                    text = state.position.toString(),
-                    style = AzkarThemeValues.typography.pagerActiveNumber.copy(
-                        color = colors.foreground,
-                    ),
-                )
-                BasicText(
-                    text = "из ${state.total}",
-                    style = AzkarThemeValues.typography.pagerCenter.copy(color = colors.muted),
-                )
-            }
-        }
-
-        AzkarPagerButton(
-            text = "Далее ›",
-            primary = true,
-            enabled = canNext,
-            modifier = Modifier.weight(1f),
-            testTag = AzkarReadingTestTags.Next,
-            onClick = onNext,
-        )
-    }
-}
-
-@Composable
-private fun AzkarPagerButton(
-    text: String,
-    primary: Boolean,
-    enabled: Boolean,
-    modifier: Modifier,
-    testTag: String,
-    onClick: () -> Unit,
-) {
-    val colors = AzkarThemeValues.colors
-    val shape = RoundedCornerShape(AzkarRadius.pagerButton)
-    Box(
-        modifier = modifier
-            .alpha(if (enabled) 1f else AzkarDimensions.disabledControlAlpha)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-            .testTag(testTag)
-            .defaultMinSize(minHeight = AzkarDimensions.pagerButtonMinHeight)
-            .clip(shape)
-            .background(if (primary) colors.primary else colors.card)
-            .then(
-                if (primary) Modifier
-                else Modifier.border(AzkarBorders.thin, colors.border, shape),
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        BasicText(
-            text = text,
-            style = AzkarThemeValues.typography.pagerButton.copy(
-                color = if (primary) colors.primaryActionText else colors.foreground,
-            ),
-        )
-    }
 }
 
 private fun Modifier.topRule(color: Color, dashed: Boolean): Modifier = drawBehind {
