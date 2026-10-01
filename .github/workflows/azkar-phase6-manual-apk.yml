@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - azkar-native-phase6-app-integration-2026-09-30
+      - azkar-reader-polish-v2-2026-10-01
 
 permissions:
   contents: read
