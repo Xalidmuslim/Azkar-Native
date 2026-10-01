@@ -879,7 +879,6 @@ private fun AzkarSettingsSheet(
             ) {
                 AzkarFontSettings(settings, onUpdateSettings)
                 AzkarSizeSettings(settings, onUpdateSettings)
-                AzkarViewModeSettings(viewMode, onViewModeChange)
                 AzkarVisibilitySettings(settings, onUpdateSettings)
                 AzkarReadingBehaviorSettings(settings, onUpdateSettings)
                 AzkarThemeSettings(settings, onUpdateSettings)
