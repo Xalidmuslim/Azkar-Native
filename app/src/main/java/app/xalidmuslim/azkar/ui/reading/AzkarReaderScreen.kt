@@ -4,14 +4,21 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.systemGestureExclusion
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,17 +29,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import app.xalidmuslim.azkar.R
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
 import app.xalidmuslim.azkar.persistence.AzkarDateProvider
 import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
 import app.xalidmuslim.azkar.persistence.SystemAzkarDateProvider
+import app.xalidmuslim.azkar.ui.designsystem.AzkarSurface
 import app.xalidmuslim.azkar.ui.designsystem.AzkarTheme
+import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeValues
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -111,7 +126,39 @@ fun AzkarReaderScreen(
     val navigation = controller.state
     val readerUi = resolvedUiController.state
     if (!readerUi.isHydrated) {
-        Box(modifier = modifier.fillMaxSize())
+        AzkarTheme {
+            AzkarSurface(modifier = modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.azkar_launcher_exact),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                        )
+                        BasicText(
+                            text = "Азкар",
+                            style = AzkarThemeValues.typography.brandTitle.copy(
+                                color = AzkarThemeValues.colors.foreground,
+                            ),
+                        )
+                        BasicText(
+                            text = "УТРО · ВЕЧЕР",
+                            style = AzkarThemeValues.typography.brandSubtitle.copy(
+                                color = AzkarThemeValues.colors.muted,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
         return
     }
     val settings = readerUi.settings
@@ -161,6 +208,7 @@ fun AzkarReaderScreen(
 
     LaunchedEffect(settings.hideCompleted, active.item.id, active.currentCount) {
         if (settings.hideCompleted && active.currentCount >= active.item.count) {
+            delay(600)
             (nextTarget ?: previousTarget)?.let(controller::navigateTo)
         }
     }
@@ -213,6 +261,7 @@ fun AzkarReaderScreen(
     }
 
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val animationsEnabled = remember {
         Settings.Global.getFloat(
             context.contentResolver,
@@ -354,7 +403,10 @@ fun AzkarReaderScreen(
                         onOpenExplanation = resolvedUiController::openExplanation,
                         onOpenActions = resolvedUiController::openActions,
                         onIncrementCount = { itemId, target ->
-                            resolvedUiController.incrementProgress(itemId, target)
+                            val finishing = resolvedUiController.currentCount(itemId) == target - 1
+                            if (resolvedUiController.incrementProgress(itemId, target) && finishing) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
                         },
                         onResetProgress = {
                             resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
@@ -382,7 +434,10 @@ fun AzkarReaderScreen(
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onIncrementCount = { itemId, target ->
-                            resolvedUiController.incrementProgress(itemId, target)
+                            val finishing = resolvedUiController.currentCount(itemId) == target - 1
+                            if (resolvedUiController.incrementProgress(itemId, target) && finishing) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
                         },
                         onResetProgress = {
                             resolvedUiController.resetProgress(resolvedEntries.map { it.item.id })
@@ -412,6 +467,12 @@ fun AzkarReaderScreen(
                 onDismiss = { resolvedUiController.closeSheet() },
                 onResetSettings = {
                     resolvedUiController.updateSettings { AzkarReaderSettings() }
+                },
+                onDecrementProgress = { itemId, target ->
+                    resolvedUiController.decrementProgress(itemId, target)
+                },
+                onResetItemProgress = { itemId ->
+                    resolvedUiController.resetSingleProgress(itemId)
                 },
                 onSelectContents = { index ->
                     when (readerUi.viewMode) {
