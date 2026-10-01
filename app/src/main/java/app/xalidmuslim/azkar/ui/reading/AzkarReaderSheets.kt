@@ -985,6 +985,9 @@ private fun AzkarFontSettings(
                             active = settings.arabicFontFamily == font,
                             modifier = Modifier.weight(1f),
                             fontFamily = AzkarFontFamilies.arabic(font),
+                            arabicPreview = true,
+                            sampleFontSizeSp = if (font == ArabicFontFamily.AMIRI) 16f else 18f,
+                            sampleLineHeightSp = if (font == ArabicFontFamily.AMIRI) 34f else 28f,
                             onClick = { update { it.copy(arabicFontFamily = font) } },
                         )
                     }
@@ -1001,6 +1004,9 @@ private fun AzkarFontTile(
     active: Boolean,
     modifier: Modifier,
     fontFamily: FontFamily,
+    arabicPreview: Boolean = false,
+    sampleFontSizeSp: Float = 18f,
+    sampleLineHeightSp: Float = 25f,
     onClick: () -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
@@ -1017,7 +1023,13 @@ private fun AzkarFontTile(
     ).value
     Column(
         modifier = modifier
-            .height(AzkarDimensions.settingsFontTileHeight)
+            .height(
+                if (arabicPreview) {
+                    AzkarDimensions.settingsArabicFontTileHeight
+                } else {
+                    AzkarDimensions.settingsFontTileHeight
+                },
+            )
             .clip(shape)
             .background(backgroundColor)
             .border(AzkarBorders.thin, borderColor, shape)
@@ -1032,17 +1044,42 @@ private fun AzkarFontTile(
             text = title,
             style = AzkarThemeValues.typography.fontTileTitle.copy(
                 color = colors.foreground,
-                fontFamily = fontFamily,
+                fontFamily = if (arabicPreview) {
+                    AzkarThemeValues.typography.fontTileTitle.fontFamily
+                } else {
+                    fontFamily
+                },
             ),
         )
-        BasicText(
-            text = sample,
-            modifier = Modifier.padding(bottom = 2.dp),
-            style = AzkarThemeValues.typography.arabicFontTileSample.copy(
-                color = colors.muted,
-                fontFamily = fontFamily,
-            ),
-        )
+        if (arabicPreview) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AzkarDimensions.settingsArabicFontSampleHeight),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                BasicText(
+                    text = sample,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = AzkarThemeValues.typography.arabicFontTileSample.copy(
+                        color = colors.muted,
+                        fontFamily = fontFamily,
+                        fontSize = sampleFontSizeSp.sp,
+                        lineHeight = sampleLineHeightSp.sp,
+                        textAlign = TextAlign.Right,
+                    ),
+                )
+            }
+        } else {
+            BasicText(
+                text = sample,
+                modifier = Modifier.padding(bottom = 2.dp),
+                style = AzkarThemeValues.typography.fontTileSample.copy(
+                    color = colors.muted,
+                    fontFamily = fontFamily,
+                ),
+            )
+        }
     }
 }
 
