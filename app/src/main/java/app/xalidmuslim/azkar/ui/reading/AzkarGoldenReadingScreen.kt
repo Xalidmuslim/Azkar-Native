@@ -50,6 +50,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -108,9 +110,6 @@ internal object AzkarReadingTestTags {
 
 private const val SourceNoteText =
     "Основа списка — Абдуль-Азиз ат-Тарифи, «Утренние и вечерние азкары: передача и исследование». Спорные оценки отмечены отдельно."
-
-private const val FooterText =
-    "Русский текст — смысловой перевод. Разногласия и дополнительные оценки вынесены в примечания и разъяснения."
 
 @Composable
 fun AzkarGoldenReadingScreen(
@@ -187,7 +186,6 @@ fun AzkarGoldenReadingScreen(
                         onIncrementCount(state.item.id, state.item.count)
                     },
                 )
-                AzkarFooter()
             }
 
             Box(
@@ -271,7 +269,9 @@ internal fun AzkarHeader(onOpenSettings: () -> Unit) {
         }
         AzkarIconButton(
             onClick = onOpenSettings,
-            modifier = Modifier.testTag(AzkarReadingTestTags.OpenSettingsTop),
+            modifier = Modifier
+                .semantics { contentDescription = "Настройки чтения" }
+                .testTag(AzkarReadingTestTags.OpenSettingsTop),
         ) {
             BasicText(
                 text = "⚙",
@@ -305,18 +305,12 @@ internal fun AzkarSourceNote(onOpenSourceInfo: () -> Unit = {}) {
             )
             .testTag(AzkarReadingTestTags.SourceNote),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            BasicText(
-                text = "Источник списка",
-                style = AzkarThemeValues.typography.progressLabel.copy(color = colors.foreground),
-            )
-            BasicText(
-                text = "Абдуль-Азиз ат-Тарифи · Подробнее ›",
-                style = AzkarThemeValues.typography.sourceNote.copy(color = colors.muted),
-            )
-        }
+        BasicText(
+            text = "Источник списка · Абдуль-Азиз ат-Тарифи · Подробнее ›",
+            maxLines = 1,
+            style = AzkarThemeValues.typography.sourceNote.copy(color = colors.muted),
+        )
     }
 }
 
@@ -417,6 +411,7 @@ internal fun AzkarProgressCard(
     val shape = RoundedCornerShape(AzkarRadius.progressCard)
     val roundedPercent = if (state.total == 0) 0
     else (state.completedItems.toFloat() / state.total.toFloat() * 100f).roundToInt()
+    var resetArmed by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -445,11 +440,20 @@ internal fun AzkarProgressCard(
                 style = AzkarThemeValues.typography.progressLabel.copy(color = colors.muted),
             )
             BasicText(
-                text = "↻ Сбросить",
+                text = if (resetArmed) "Подтвердить сброс" else "Сбросить",
                 modifier = Modifier
-                    .clickable(onClick = onResetProgress)
+                    .clickable {
+                        if (resetArmed) {
+                            onResetProgress()
+                            resetArmed = false
+                        } else {
+                            resetArmed = true
+                        }
+                    }
                     .testTag(AzkarReadingTestTags.ResetProgress),
-                style = AzkarThemeValues.typography.resetTextButton.copy(color = colors.muted),
+                style = AzkarThemeValues.typography.resetTextButton.copy(
+                    color = if (resetArmed) colors.warning else colors.muted,
+                ),
             )
         }
         AzkarProgressBar(progress = roundedPercent / 100f, animate = true)
@@ -661,6 +665,7 @@ internal fun AzkarDhikrCard(
                     }
                     AzkarIconButton(
                         onClick = onOpenActions,
+                        modifier = Modifier.semantics { contentDescription = "Действия с азкаром" },
                         size = AzkarIconButtonSize.Compact,
                     ) {
                         BasicText(
@@ -836,10 +841,20 @@ private fun AzkarExplanationButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        BasicText(
-            text = "▣ Разъяснение · история · слова учёных",
-            style = AzkarThemeValues.typography.explainButton.copy(color = colors.foreground),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_explanation),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            BasicText(
+                text = "Разъяснение",
+                style = AzkarThemeValues.typography.explainButton.copy(color = colors.foreground),
+            )
+        }
     }
 }
 
@@ -993,13 +1008,6 @@ private fun AzkarPager(
                     style = AzkarThemeValues.typography.pagerCenter.copy(color = colors.muted),
                 )
             }
-            if (!narrow) {
-                BasicText(
-                    text = "свайп влево/вправо",
-                    modifier = Modifier.padding(top = AzkarSpacing.pagerHelperTop),
-                    style = AzkarThemeValues.typography.pagerHelper.copy(color = colors.muted),
-                )
-            }
         }
 
         AzkarPagerButton(
@@ -1045,27 +1053,6 @@ private fun AzkarPagerButton(
             ),
         )
     }
-}
-
-@Composable
-internal fun AzkarFooter() {
-    val colors = AzkarThemeValues.colors
-    BasicText(
-        text = FooterText,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = AzkarSpacing.footerHorizontal,
-                end = AzkarSpacing.footerHorizontal,
-                top = AzkarSpacing.footerTop,
-                bottom = AzkarSpacing.footerBottom,
-            )
-            .testTag(AzkarReadingTestTags.Footer),
-        style = AzkarThemeValues.typography.footer.copy(
-            color = colors.muted,
-            textAlign = TextAlign.Center,
-        ),
-    )
 }
 
 private fun Modifier.topRule(color: Color, dashed: Boolean): Modifier = drawBehind {
