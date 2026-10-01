@@ -207,7 +207,7 @@ class DataStoreAzkarPreferencesRepository(
                 RussianFontFamily.PT_SERIF,
                 RussianFontFamily.INTER,
                 RussianFontFamily.ANDROID_SANS -> settings.russianFontFamily
-                else -> RussianFontFamily.PT_SERIF
+                else -> RussianFontFamily.ANDROID_SANS
             },
             arabicFontFamily = when (settings.arabicFontFamily) {
                 ArabicFontFamily.NOTO_NASKH_ARABIC,
