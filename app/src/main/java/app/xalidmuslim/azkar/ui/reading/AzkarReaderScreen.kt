@@ -10,6 +10,7 @@ import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,6 +46,7 @@ import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
 import app.xalidmuslim.azkar.persistence.SystemAzkarDateProvider
 import app.xalidmuslim.azkar.ui.designsystem.AzkarSurface
 import app.xalidmuslim.azkar.ui.designsystem.AzkarTheme
+import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeValues
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -162,6 +164,23 @@ fun AzkarReaderScreen(
         return
     }
     val settings = readerUi.settings
+    val systemDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = when (settings.themeMode) {
+        AzkarThemeMode.Dark -> true
+        AzkarThemeMode.Light -> false
+        AzkarThemeMode.System -> systemDarkTheme
+    }
+    val toggleTheme: () -> Unit = {
+        resolvedUiController.updateSettings {
+            it.copy(
+                themeMode = if (isDarkTheme) {
+                    AzkarThemeMode.Light
+                } else {
+                    AzkarThemeMode.Dark
+                },
+            )
+        }
+    }
     val resolvedEntries = entries.map { entry ->
         entry.copy(
             currentCount = resolvedUiController
@@ -407,6 +426,8 @@ fun AzkarReaderScreen(
                         readingScrollState = readingScrollState,
                         readingAreaModifier = transitionModifier,
                         onOpenSettings = resolvedUiController::openSettings,
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = toggleTheme,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onOpenExplanation = resolvedUiController::openExplanation,
@@ -442,6 +463,8 @@ fun AzkarReaderScreen(
                         onOpenSettings = resolvedUiController::openSettings,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = toggleTheme,
                         onIncrementCount = { itemId, target ->
                             val finishing = resolvedUiController.currentCount(itemId) == target - 1
                             if (resolvedUiController.incrementProgress(itemId, target) && finishing) {
