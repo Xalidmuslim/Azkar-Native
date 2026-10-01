@@ -4,15 +4,12 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Color as AndroidColor
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -49,15 +46,7 @@ fun AzkarTheme(
     content: @Composable () -> Unit,
 ) {
     val dark = resolveAzkarDarkTheme(themeMode, isSystemInDarkTheme())
-    val darkFraction = animateFloatAsState(
-        targetValue = if (dark) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = AzkarMotion.themeTransitionDurationMillis,
-            easing = AzkarMotion.sheetEasing,
-        ),
-        label = "azkar-theme-transition",
-    ).value
-    val colors = lerpAzkarColorScheme(AzkarColors.Light, AzkarColors.Dark, darkFraction)
+    val colors = if (dark) AzkarColors.Dark else AzkarColors.Light
     val typography = AzkarTypography.create(
         russianFont = russianFontFamily,
         arabicFont = arabicFontFamily,
@@ -76,35 +65,6 @@ fun AzkarTheme(
         content = content,
     )
 }
-
-private fun lerpAzkarColorScheme(
-    light: AzkarColorScheme,
-    dark: AzkarColorScheme,
-    fraction: Float,
-): AzkarColorScheme = AzkarColorScheme(
-    background = lerp(light.background, dark.background, fraction),
-    foreground = lerp(light.foreground, dark.foreground, fraction),
-    card = lerp(light.card, dark.card, fraction),
-    surface = lerp(light.surface, dark.surface, fraction),
-    muted = lerp(light.muted, dark.muted, fraction),
-    border = lerp(light.border, dark.border, fraction),
-    primary = lerp(light.primary, dark.primary, fraction),
-    accent = lerp(light.accent, dark.accent, fraction),
-    warning = lerp(light.warning, dark.warning, fraction),
-    success = lerp(light.success, dark.success, fraction),
-    primaryActionText = lerp(light.primaryActionText, dark.primaryActionText, fraction),
-    countButtonText = lerp(light.countButtonText, dark.countButtonText, fraction),
-    overlay = lerp(light.overlay, dark.overlay, fraction),
-    doneCardBorder = lerp(light.doneCardBorder, dark.doneCardBorder, fraction),
-    doneMarkerBorder = lerp(light.doneMarkerBorder, dark.doneMarkerBorder, fraction),
-    doneMarkerBackground = lerp(light.doneMarkerBackground, dark.doneMarkerBackground, fraction),
-    warningBadgeBorder = lerp(light.warningBadgeBorder, dark.warningBadgeBorder, fraction),
-    noteBorder = lerp(light.noteBorder, dark.noteBorder, fraction),
-    noteBackground = lerp(light.noteBackground, dark.noteBackground, fraction),
-    stickyToolbarBackground = lerp(light.stickyToolbarBackground, dark.stickyToolbarBackground, fraction),
-    activeItemBackground = lerp(light.activeItemBackground, dark.activeItemBackground, fraction),
-    sheetHandle = lerp(light.sheetHandle, dark.sheetHandle, fraction),
-)
 
 @Composable
 private fun AzkarEdgeToEdgeEffect(dark: Boolean) {
