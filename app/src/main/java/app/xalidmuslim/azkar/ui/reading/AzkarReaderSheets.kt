@@ -124,7 +124,7 @@ internal fun AzkarReaderSheetHost(
                     durationMillis = AzkarMotion.sheetDurationMillis,
                     easing = AzkarMotion.sheetEasing,
                 ),
-                initialOffsetY = { (it * 0.08f).roundToInt().coerceAtLeast(1) },
+                initialOffsetY = { (it * 0.02f).roundToInt().coerceAtLeast(1) },
             ),
         exit = fadeOut(tween(AzkarMotion.sheetDurationMillis)) +
             slideOutVertically(
@@ -132,7 +132,7 @@ internal fun AzkarReaderSheetHost(
                     durationMillis = AzkarMotion.sheetDurationMillis,
                     easing = AzkarMotion.sheetEasing,
                 ),
-                targetOffsetY = { (it * 0.08f).roundToInt().coerceAtLeast(1) },
+                targetOffsetY = { (it * 0.02f).roundToInt().coerceAtLeast(1) },
             ),
     ) {
         when (activeSheet) {
