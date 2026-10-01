@@ -110,8 +110,6 @@ internal object AzkarReadingTestTags {
     const val ListCardPrefix = "azkar-list-card-"
 }
 
-private const val SourceNoteText =
-    "Основа списка — Абдуль-Азиз ат-Тарифи, «Утренние и вечерние азкары: передача и исследование». Спорные оценки отмечены отдельно."
 
 @Composable
 fun AzkarGoldenReadingScreen(
@@ -309,7 +307,7 @@ internal fun AzkarSourceNote(onOpenSourceInfo: () -> Unit = {}) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BasicText(
-            text = "Источник списка · Абдуль-Азиз ат-Тарифи · Подробнее ›",
+            text = "Источник списка · ат-Тарифи · Подробнее ›",
             maxLines = 1,
             style = AzkarThemeValues.typography.sourceNote.copy(color = colors.muted),
         )
