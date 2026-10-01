@@ -121,7 +121,8 @@ class DataStoreAzkarPreferencesRepository(
             ).takeIf {
                 it == RussianFontFamily.LITERATA ||
                     it == RussianFontFamily.PT_SERIF ||
-                    it == RussianFontFamily.INTER
+                    it == RussianFontFamily.INTER ||
+                    it == RussianFontFamily.ANDROID_SANS
             } ?: defaults.russianFontFamily,
             arabicFontFamily = enumOrDefault(
                 preferences[AzkarPreferenceKeys.ArabicFont],
