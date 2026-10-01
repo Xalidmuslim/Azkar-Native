@@ -125,6 +125,7 @@ internal fun AzkarListReadingScreen(
                             interactionModifier = Modifier,
                             compactReader = settings.readerStyle == AzkarReaderStyle.Compact,
                             showTranslation = settings.showTranslation,
+                            showTransliteration = settings.showTransliteration,
                             showSources = settings.showSources,
                             showNotes = settings.showNotes,
                             onOpenExplanation = {
