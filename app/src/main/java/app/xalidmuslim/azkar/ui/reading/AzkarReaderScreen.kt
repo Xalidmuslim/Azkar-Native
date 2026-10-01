@@ -425,7 +425,7 @@ fun AzkarReaderScreen(
                         onToggleTheme = toggleTheme,
                         onOpenContents = resolvedUiController::openContents,
                         viewMode = readerUi.viewMode,
-                        onViewModeChange = resolvedUiController::setViewMode,
+                        onViewModeChange = { mode -> resolvedUiController.setViewMode(mode) },
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onOpenExplanation = resolvedUiController::openExplanation,
                         onOpenActions = resolvedUiController::openActions,
@@ -462,7 +462,7 @@ fun AzkarReaderScreen(
                         isDarkTheme = isDarkTheme,
                         onToggleTheme = toggleTheme,
                         onOpenContents = resolvedUiController::openContents,
-                        onViewModeChange = resolvedUiController::setViewMode,
+                        onViewModeChange = { mode -> resolvedUiController.setViewMode(mode) },
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onIncrementCount = { itemId, target ->
                             val finishing = resolvedUiController.currentCount(itemId) == target - 1
