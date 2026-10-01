@@ -218,6 +218,30 @@ class AzkarReaderUiController(
         return true
     }
 
+    fun decrementProgress(stableDhikrId: String, target: Int): Boolean {
+        if (target <= 0) return false
+        val current = currentCount(stableDhikrId).coerceIn(0, target)
+        if (current <= 0) return false
+
+        state = state.copy(
+            progressById = state.progressById + (stableDhikrId to current - 1),
+        )
+        launchPersistence {
+            repository?.decrementProgress(sessionDate, stableDhikrId, target)
+        }
+        return true
+    }
+
+    fun resetSingleProgress(stableDhikrId: String) {
+        if (stableDhikrId.isBlank()) return
+        state = state.copy(
+            progressById = state.progressById + (stableDhikrId to 0),
+        )
+        launchPersistence {
+            repository?.resetProgress(sessionDate, setOf(stableDhikrId))
+        }
+    }
+
     fun resetProgress(visibleItemIds: Collection<String>) {
         val ids = visibleItemIds.filter { it.isNotBlank() }.toSet()
         if (ids.isEmpty()) return
