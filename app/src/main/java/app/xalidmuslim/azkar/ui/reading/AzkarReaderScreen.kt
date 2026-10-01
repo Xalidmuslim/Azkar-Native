@@ -362,6 +362,7 @@ fun AzkarReaderScreen(
                         onPeriodChange = onPeriodChange,
                         compactReader = settings.readerStyle == AzkarReaderStyle.Compact,
                         showTranslation = settings.showTranslation,
+                        showTransliteration = settings.showTransliteration,
                         showSources = settings.showSources,
                         showNotes = settings.showNotes,
                         canPrevious = previousTarget != null,
