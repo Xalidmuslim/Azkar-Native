@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import app.xalidmuslim.azkar.content.AzkarExplanationEnrichment
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
 import app.xalidmuslim.azkar.ui.designsystem.AzkarBorders
+import app.xalidmuslim.azkar.ui.designsystem.AzkarConfirmDialog
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarElevation
 import app.xalidmuslim.azkar.ui.designsystem.AzkarFontFamilies
@@ -159,8 +160,6 @@ internal fun AzkarReaderSheetHost(
             }
             AzkarReaderSheet.SourceInfo -> AzkarSourceInfoSheet(onDismiss = onDismiss)
             AzkarReaderSheet.Actions -> {
-                val item = entries.firstOrNull { it.item.id == selectedActionId }?.item
-                    ?: entries.getOrNull(activeIndex)?.item
                 val entry = entries.firstOrNull { it.item.id == selectedActionId }
                     ?: entries.getOrNull(activeIndex)
                 if (entry != null) {
@@ -446,7 +445,7 @@ private fun AzkarExplanationSheet(
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.insightBodyGap),
         ) {
             if (meaning.isNotBlank()) {
-                AzkarInsightSection("Что это значит", AzkarInsightTone.Meaning) {
+                AzkarInsightSection("Смысл", AzkarInsightTone.Meaning) {
                     BasicText(
                         text = meaning,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -456,7 +455,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             if (keyMeanings.isNotEmpty()) {
-                AzkarInsightSection("Ключевые смыслы", AzkarInsightTone.KeyMeaning) {
+                AzkarInsightSection("Что означает", AzkarInsightTone.KeyMeaning) {
                     BasicText(
                         text = keyMeanings.joinToString("\n\n") { "• $it" },
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -466,7 +465,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             heartFocus?.let { focus ->
-                AzkarInsightSection("О чём думать во время чтения", AzkarInsightTone.Heart) {
+                AzkarInsightSection("О чём размышлять при чтении", AzkarInsightTone.Heart) {
                     BasicText(
                         text = focus,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -649,11 +648,13 @@ private fun AzkarActionsSheet(
 ) {
     val item = entry.item
     val clipboard = LocalClipboardManager.current
+    var showResetDialog by rememberSaveable(item.id) { mutableStateOf(false) }
+
     AzkarBottomSheet(
         title = "Ещё",
         eyebrow = "",
         subtitle = item.title,
-        maxHeightFraction = 0.62f,
+        maxHeightFraction = 0.68f,
         specificTestTag = "azkar-actions-sheet",
         onDismiss = onDismiss,
     ) {
@@ -667,6 +668,19 @@ private fun AzkarActionsSheet(
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (entry.currentCount > 0) {
+                AzkarOutlineButton(
+                    text = "Отменить последнее (${entry.currentCount} → ${entry.currentCount - 1})",
+                    onClick = {
+                        onDecrementProgress(item.id, item.count)
+                        onDismiss()
+                    },
+                )
+                AzkarOutlineButton(
+                    text = "Сбросить только этот азкар",
+                    onClick = { showResetDialog = true },
+                )
+            }
             AzkarOutlineButton(
                 text = "Копировать арабский текст",
                 onClick = {
@@ -674,6 +688,15 @@ private fun AzkarActionsSheet(
                     onDismiss()
                 },
             )
+            if (item.transliteration.isNotBlank()) {
+                AzkarOutlineButton(
+                    text = "Копировать транскрипцию",
+                    onClick = {
+                        clipboard.setText(AnnotatedString(item.transliteration))
+                        onDismiss()
+                    },
+                )
+            }
             AzkarOutlineButton(
                 text = "Копировать перевод",
                 onClick = {
@@ -688,23 +711,20 @@ private fun AzkarActionsSheet(
                     onDismiss()
                 },
             )
-            if (entry.currentCount > 0) {
-                AzkarOutlineButton(
-                    text = "Отменить последнее +1",
-                    onClick = {
-                        onDecrementProgress(item.id, item.count)
-                        onDismiss()
-                    },
-                )
-                AzkarOutlineButton(
-                    text = "Сбросить только этот азкар",
-                    onClick = {
-                        onResetItemProgress(item.id)
-                        onDismiss()
-                    },
-                )
-            }
         }
+    }
+
+    if (showResetDialog) {
+        AzkarConfirmDialog(
+            title = "Сбросить этот азкар?",
+            message = "Счётчик «${item.title}» будет обнулён только за сегодня.",
+            confirmText = "Сбросить",
+            onConfirm = {
+                onResetItemProgress(item.id)
+                onDismiss()
+            },
+            onDismiss = { showResetDialog = false },
+        )
     }
 }
 
@@ -715,7 +735,7 @@ private fun AzkarSettingsSheet(
     onUpdateSettings: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
     onResetSettings: () -> Unit,
 ) {
-    var resetArmed by rememberSaveable { mutableStateOf(false) }
+    var showResetDialog by rememberSaveable { mutableStateOf(false) }
     AzkarBottomSheet(
         title = "Настройки чтения",
         eyebrow = "",
@@ -758,18 +778,21 @@ private fun AzkarSettingsSheet(
                 AzkarReadingBehaviorSettings(settings, onUpdateSettings)
                 AzkarThemeSettings(settings, onUpdateSettings)
                 AzkarOutlineButton(
-                    text = if (resetArmed) "Подтвердить сброс настроек" else "Сбросить настройки",
-                    onClick = {
-                        if (resetArmed) {
-                            onResetSettings()
-                            resetArmed = false
-                        } else {
-                            resetArmed = true
-                        }
-                    },
+                    text = "Сбросить настройки",
+                    onClick = { showResetDialog = true },
                 )
             }
         }
+    }
+
+    if (showResetDialog) {
+        AzkarConfirmDialog(
+            title = "Сбросить настройки?",
+            message = "Шрифты, размеры, отображение блоков и тема вернутся к значениям по умолчанию. Прогресс чтения не изменится.",
+            confirmText = "Сбросить",
+            onConfirm = onResetSettings,
+            onDismiss = { showResetDialog = false },
+        )
     }
 }
 
