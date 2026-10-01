@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import app.xalidmuslim.azkar.content.AzkarPeriod
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
+import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
 import app.xalidmuslim.azkar.ui.designsystem.RussianFontFamily
 import app.xalidmuslim.azkar.ui.reading.AzkarReaderSettings
@@ -34,6 +35,7 @@ class DataStoreAzkarPreferencesRepository(
             preferences[AzkarPreferenceKeys.ArabicFont] = safe.arabicFontFamily.name
             preferences[AzkarPreferenceKeys.ArabicSize] = safe.arabicSizeSp
             preferences[AzkarPreferenceKeys.RussianSize] = safe.russianSizeSp
+            preferences[AzkarPreferenceKeys.TransliterationSize] = safe.transliterationSizeSp
             preferences[AzkarPreferenceKeys.LineHeight] = safe.lineHeight
             preferences[AzkarPreferenceKeys.ReaderStyle] = safe.readerStyle.name
             preferences[AzkarPreferenceKeys.ShowTranslation] = safe.showTranslation
@@ -144,6 +146,12 @@ class DataStoreAzkarPreferencesRepository(
                 13f,
                 25f,
             ),
+            transliterationSizeSp = validatedFloat(
+                preferences[AzkarPreferenceKeys.TransliterationSize],
+                defaults.transliterationSizeSp,
+                AzkarDimensions.transliterationSizeMinSp,
+                AzkarDimensions.transliterationSizeMaxSp,
+            ),
             lineHeight = validatedFloat(
                 preferences[AzkarPreferenceKeys.LineHeight],
                 defaults.lineHeight,
@@ -198,6 +206,12 @@ class DataStoreAzkarPreferencesRepository(
         return settings.copy(
             arabicSizeSp = validatedFloat(settings.arabicSizeSp, defaults.arabicSizeSp, 22f, 44f),
             russianSizeSp = validatedFloat(settings.russianSizeSp, defaults.russianSizeSp, 13f, 25f),
+            transliterationSizeSp = validatedFloat(
+                settings.transliterationSizeSp,
+                defaults.transliterationSizeSp,
+                AzkarDimensions.transliterationSizeMinSp,
+                AzkarDimensions.transliterationSizeMaxSp,
+            ),
             lineHeight = validatedFloat(settings.lineHeight, defaults.lineHeight, 1.25f, 2.00f),
         )
     }
