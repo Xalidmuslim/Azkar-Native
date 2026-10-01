@@ -108,8 +108,8 @@ android {
         applicationId 'app.xalidmuslim.azkar'
         minSdk 24
         targetSdk 35
-        versionCode 2
-        versionName '0.2.1-manual'
+        versionCode 3
+        versionName '0.2.2-manual'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
