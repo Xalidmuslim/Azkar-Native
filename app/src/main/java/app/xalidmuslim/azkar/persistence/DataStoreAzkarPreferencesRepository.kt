@@ -37,6 +37,7 @@ class DataStoreAzkarPreferencesRepository(
             preferences[AzkarPreferenceKeys.LineHeight] = safe.lineHeight
             preferences[AzkarPreferenceKeys.ReaderStyle] = safe.readerStyle.name
             preferences[AzkarPreferenceKeys.ShowTranslation] = safe.showTranslation
+            preferences[AzkarPreferenceKeys.ShowTransliteration] = safe.showTransliteration
             preferences[AzkarPreferenceKeys.ShowSources] = safe.showSources
             preferences[AzkarPreferenceKeys.ShowNotes] = safe.showNotes
             preferences[AzkarPreferenceKeys.HideCompleted] = safe.hideCompleted
@@ -132,6 +133,7 @@ class DataStoreAzkarPreferencesRepository(
                 AzkarReaderStyle.Book,
             ),
             showTranslation = preferences[AzkarPreferenceKeys.ShowTranslation] ?: true,
+            showTransliteration = preferences[AzkarPreferenceKeys.ShowTransliteration] ?: false,
             showSources = preferences[AzkarPreferenceKeys.ShowSources] ?: true,
             showNotes = preferences[AzkarPreferenceKeys.ShowNotes] ?: true,
             hideCompleted = preferences[AzkarPreferenceKeys.HideCompleted] ?: false,
