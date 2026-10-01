@@ -131,6 +131,7 @@ fun AzkarGoldenReadingScreen(
     onPeriodChange: (AzkarPeriod) -> Unit = {},
     compactReader: Boolean = false,
     showTranslation: Boolean = true,
+    showTransliteration: Boolean = false,
     showSources: Boolean = true,
     showNotes: Boolean = true,
     canPrevious: Boolean = state.position > 1,
@@ -174,6 +175,7 @@ fun AzkarGoldenReadingScreen(
                     interactionModifier = readingAreaModifier,
                     compactReader = compactReader,
                     showTranslation = showTranslation,
+                    showTransliteration = showTransliteration,
                     showSources = showSources,
                     showNotes = showNotes,
                     onOpenExplanation = { onOpenExplanation(state.item.id) },
@@ -534,6 +536,7 @@ internal fun AzkarDhikrCard(
     interactionModifier: Modifier,
     compactReader: Boolean,
     showTranslation: Boolean,
+    showTransliteration: Boolean,
     showSources: Boolean,
     showNotes: Boolean,
     onOpenExplanation: () -> Unit,
@@ -543,7 +546,9 @@ internal fun AzkarDhikrCard(
     val item = state.item
     val colors = AzkarThemeValues.colors
     val completed = state.currentCount >= item.count
-    var showTransliteration by rememberSaveable(item.id) { mutableStateOf(true) }
+    var transliterationExpanded by rememberSaveable(item.id, showTransliteration) {
+        mutableStateOf(showTransliteration)
+    }
 
     val cardModifier = Modifier
         .fillMaxWidth()
@@ -659,7 +664,7 @@ internal fun AzkarDhikrCard(
                 style = AzkarThemeValues.typography.arabicBody.copy(color = colors.foreground),
             )
 
-            if (item.transliteration.isNotBlank()) {
+            if (showTransliteration && item.transliteration.isNotBlank()) {
                 val transliterationShape = RoundedCornerShape(AzkarRadius.noteBox)
                 Column(
                     modifier = Modifier
@@ -667,7 +672,7 @@ internal fun AzkarDhikrCard(
                         .padding(top = 4.dp)
                         .clip(transliterationShape)
                         .background(colors.surface)
-                        .clickable { showTransliteration = !showTransliteration }
+                        .clickable { transliterationExpanded = !transliterationExpanded }
                         .padding(
                             horizontal = AzkarSpacing.noteHorizontal,
                             vertical = 8.dp,
@@ -686,11 +691,11 @@ internal fun AzkarDhikrCard(
                             ),
                         )
                         BasicText(
-                            text = if (showTransliteration) "Скрыть ︿" else "Показать ﹀",
+                            text = if (transliterationExpanded) "Скрыть ︿" else "Показать ﹀",
                             style = AzkarThemeValues.typography.sourceRow.copy(color = colors.muted),
                         )
                     }
-                    AnimatedVisibility(visible = showTransliteration) {
+                    AnimatedVisibility(visible = transliterationExpanded) {
                         BasicText(
                             text = item.transliteration,
                             modifier = Modifier
