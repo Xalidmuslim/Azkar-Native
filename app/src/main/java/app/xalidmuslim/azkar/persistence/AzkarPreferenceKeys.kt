@@ -15,6 +15,7 @@ internal object AzkarPreferenceKeys {
     val LineHeight = floatPreferencesKey("reader_line_height")
     val ReaderStyle = stringPreferencesKey("reader_style")
     val ShowTranslation = booleanPreferencesKey("reader_show_translation")
+    val ShowTransliteration = booleanPreferencesKey("reader_show_transliteration")
     val ShowSources = booleanPreferencesKey("reader_show_sources")
     val ShowNotes = booleanPreferencesKey("reader_show_notes")
     val HideCompleted = booleanPreferencesKey("reader_hide_completed")
