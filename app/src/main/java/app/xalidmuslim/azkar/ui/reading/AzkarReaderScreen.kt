@@ -387,10 +387,13 @@ fun AzkarReaderScreen(
                     else Modifier,
                 ),
         ) {
-            if (readerUi.viewMode == AzkarReaderViewMode.Cards) {
-                // Android gesture navigation owns the extreme left/right edge by default.
-                // Reserve only a centered 200dp band so paging works from the edge while
-                // system Back remains available above and below this band.
+            if (
+                readerUi.viewMode == AzkarReaderViewMode.Cards &&
+                readerUi.activeSheet == AzkarReaderSheet.None
+            ) {
+                // Gesture exclusion is needed only while the card pager itself is active.
+                // Never keep these edge regions registered under a modal sheet: on gesture-nav
+                // phones that makes Android Back wait/compete with the reader's horizontal pager.
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
