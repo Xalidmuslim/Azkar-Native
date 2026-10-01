@@ -298,8 +298,10 @@ internal fun AzkarSourceNote(onOpenSourceInfo: () -> Unit = {}) {
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                role = Role.Button,
                 onClick = onOpenSourceInfo,
             )
+            .semantics { contentDescription = "Источник списка. Подробнее" }
             .padding(
                 horizontal = AzkarSpacing.sourceNoteHorizontal,
                 vertical = AzkarSpacing.sourceNoteVertical,
@@ -390,7 +392,11 @@ private fun AzkarPeriodButton(
         modifier = modifier
             .defaultMinSize(minHeight = AzkarDimensions.periodButtonMinHeight)
             .clip(shape)
-            .clickable(enabled = !active, onClick = onClick)
+            .semantics {
+                role = Role.Tab
+                contentDescription = if (active) "$text, выбрано" else text
+            }
+            .clickable(enabled = !active, role = Role.Tab, onClick = onClick)
             .background(Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
@@ -710,7 +716,17 @@ internal fun AzkarDhikrCard(
                         .padding(top = 4.dp)
                         .clip(transliterationShape)
                         .background(colors.surface)
-                        .clickable { transliterationExpanded = !transliterationExpanded }
+                        .clickable(
+                            role = Role.Button,
+                            onClick = { transliterationExpanded = !transliterationExpanded },
+                        )
+                        .semantics {
+                            contentDescription = if (transliterationExpanded) {
+                                "Транскрипция. Скрыть"
+                            } else {
+                                "Транскрипция. Показать"
+                            }
+                        }
                         .padding(
                             horizontal = AzkarSpacing.noteHorizontal,
                             vertical = 8.dp,
