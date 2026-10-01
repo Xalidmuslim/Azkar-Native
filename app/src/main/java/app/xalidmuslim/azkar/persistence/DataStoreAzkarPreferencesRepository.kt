@@ -121,8 +121,7 @@ class DataStoreAzkarPreferencesRepository(
                 RussianFontFamily.values(),
                 defaults.russianFontFamily,
             ).takeIf {
-                it == RussianFontFamily.LITERATA ||
-                    it == RussianFontFamily.PT_SERIF ||
+                it == RussianFontFamily.PT_SERIF ||
                     it == RussianFontFamily.INTER
             } ?: defaults.russianFontFamily,
             arabicFontFamily = enumOrDefault(
@@ -158,11 +157,7 @@ class DataStoreAzkarPreferencesRepository(
                 1.25f,
                 2.00f,
             ),
-            readerStyle = enumOrDefault(
-                preferences[AzkarPreferenceKeys.ReaderStyle],
-                AzkarReaderStyle.values(),
-                AzkarReaderStyle.Book,
-            ),
+            readerStyle = AzkarReaderStyle.Book,
             showTranslation = preferences[AzkarPreferenceKeys.ShowTranslation] ?: true,
             showTransliteration = preferences[AzkarPreferenceKeys.ShowTransliteration] ?: false,
             showSources = preferences[AzkarPreferenceKeys.ShowSources] ?: true,
@@ -204,6 +199,12 @@ class DataStoreAzkarPreferencesRepository(
     private fun validate(settings: AzkarReaderSettings): AzkarReaderSettings {
         val defaults = AzkarReaderSettings()
         return settings.copy(
+            russianFontFamily = when (settings.russianFontFamily) {
+                RussianFontFamily.PT_SERIF,
+                RussianFontFamily.INTER -> settings.russianFontFamily
+                else -> RussianFontFamily.PT_SERIF
+            },
+            readerStyle = AzkarReaderStyle.Book,
             arabicSizeSp = validatedFloat(settings.arabicSizeSp, defaults.arabicSizeSp, 22f, 44f),
             russianSizeSp = validatedFloat(settings.russianSizeSp, defaults.russianSizeSp, 13f, 25f),
             transliterationSizeSp = validatedFloat(
