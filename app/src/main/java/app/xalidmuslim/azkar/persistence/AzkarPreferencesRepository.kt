@@ -35,7 +35,7 @@ interface AzkarPreferencesRepository {
         date: LocalDate,
         stableDhikrId: String,
         target: Int,
-    ): Int
+    ): Int = 0
 
     suspend fun resetProgress(
         date: LocalDate,
