@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
@@ -138,56 +140,55 @@ fun AzkarGoldenReadingScreen(
     canPrevious: Boolean = state.position > 1,
     canNext: Boolean = state.position < state.total,
 ) {
-    AzkarSurface(modifier = modifier.fillMaxWidth().testTag(AzkarReadingTestTags.Screen)) {
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+    AzkarSurface(modifier = modifier.fillMaxSize().testTag(AzkarReadingTestTags.Screen)) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val narrow = maxWidth <= AzkarDimensions.responsiveBreakpoint
-            val readingMaxHeight = if (readingScrollState != null) {
-                (maxHeight - AzkarDimensions.pagedViewportReservedHeight).coerceAtLeast(1.dp)
-            } else {
-                null
-            }
-            val shellModifier = Modifier
-                .align(Alignment.TopCenter)
-                .widthIn(max = AzkarDimensions.shellMaxWidth)
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
-                    ),
-                )
-                .padding(horizontal = AzkarSpacing.shellHorizontal)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                .padding(bottom = AzkarSpacing.shellBottomBase)
-                .then(
-                    if (shellScrollState != null) Modifier.verticalScroll(shellScrollState)
-                    else Modifier,
-                )
-
-            Column(modifier = shellModifier) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxHeight()
+                    .widthIn(max = AzkarDimensions.shellMaxWidth)
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
+                        ),
+                    )
+                    .padding(horizontal = AzkarSpacing.shellHorizontal)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                    .padding(bottom = AzkarSpacing.shellBottomBase),
+            ) {
+                // Верхняя зона остаётся на месте. Прокручивается только карточка азкара.
                 AzkarHeader(onOpenSettings)
                 AzkarSourceNote(onOpenSourceInfo)
                 AzkarPeriodTabs(state.period, onPeriodChange)
                 AzkarProgressCard(state, onResetProgress)
-                AzkarReaderToolbar(state, narrow, onOpenContents, onOpenSettings)
-                AzkarDhikrCard(
-                    state = state,
-                    narrow = narrow,
-                    scrollState = readingScrollState,
-                    maxHeight = readingMaxHeight,
-                    interactionModifier = readingAreaModifier,
-                    compactReader = compactReader,
-                    showTranslation = showTranslation,
-                    showTransliteration = showTransliteration,
-                    transliterationSizeSp = transliterationSizeSp,
-                    showSources = showSources,
-                    showNotes = showNotes,
-                    onOpenExplanation = { onOpenExplanation(state.item.id) },
-                    onOpenActions = { onOpenActions(state.item.id) },
-                    onIncrementCount = {
-                        onIncrementCount(state.item.id, state.item.count)
-                    },
-                )
-            }
+                AzkarReaderToolbar(state, narrow, onOpenContents)
 
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                ) {
+                    AzkarDhikrCard(
+                        state = state,
+                        narrow = narrow,
+                        scrollState = readingScrollState,
+                        maxHeight = null,
+                        interactionModifier = readingAreaModifier.fillMaxSize(),
+                        compactReader = compactReader,
+                        showTranslation = showTranslation,
+                        showTransliteration = showTransliteration,
+                        transliterationSizeSp = transliterationSizeSp,
+                        showSources = showSources,
+                        showNotes = showNotes,
+                        onOpenExplanation = { onOpenExplanation(state.item.id) },
+                        onOpenActions = { onOpenActions(state.item.id) },
+                        onIncrementCount = {
+                            onIncrementCount(state.item.id, state.item.count)
+                        },
+                    )
+                }
+            }
         }
     }
 }
@@ -463,7 +464,6 @@ internal fun AzkarReaderToolbar(
     state: AzkarGoldenReadingUiState,
     narrow: Boolean,
     onOpenContents: () -> Unit,
-    onOpenSettings: () -> Unit,
     positionText: String? = null,
 ) {
     val colors = AzkarThemeValues.colors
