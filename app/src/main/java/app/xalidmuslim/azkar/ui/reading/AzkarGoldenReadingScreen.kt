@@ -225,12 +225,12 @@ internal fun AzkarHeader(onOpenSettings: () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(R.drawable.azkar_launcher_art),
+                    painter = painterResource(R.drawable.azkar_launcher_exact),
                     contentDescription = null,
                     modifier = Modifier
-                        .fillMaxWidth(0.84f)
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp)),
-                    contentScale = ContentScale.Fit,
+                    contentScale = ContentScale.Crop,
                 )
             }
             Column {
