@@ -108,6 +108,7 @@ internal object AzkarReadingTestTags {
     const val Next = "azkar-next"
     const val OpenContents = "azkar-open-contents"
     const val OpenSettingsTop = "azkar-open-settings-top"
+    const val ThemeToggle = "azkar-theme-toggle"
     const val OpenSettingsToolbar = "azkar-open-settings-toolbar"
     const val List = "azkar-reader-list"
     const val ListCardPrefix = "azkar-list-card-"
@@ -124,6 +125,8 @@ fun AzkarGoldenReadingScreen(
     readingScrollState: ScrollState? = null,
     readingAreaModifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
     onOpenContents: () -> Unit = {},
     onOpenSourceInfo: () -> Unit = {},
     onOpenExplanation: (String) -> Unit = {},
@@ -158,7 +161,11 @@ fun AzkarGoldenReadingScreen(
                     .padding(bottom = AzkarSpacing.shellBottomBase),
             ) {
                 // Верхняя зона остаётся на месте. Прокручивается только карточка азкара.
-                AzkarHeader(onOpenSettings)
+                AzkarHeader(
+                    onOpenSettings = onOpenSettings,
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = onToggleTheme,
+                )
                 AzkarSourceNote(onOpenSourceInfo)
                 AzkarPeriodTabs(state.period, onPeriodChange)
                 AzkarProgressCard(state, onResetProgress)
@@ -194,7 +201,11 @@ fun AzkarGoldenReadingScreen(
 }
 
 @Composable
-internal fun AzkarHeader(onOpenSettings: () -> Unit) {
+internal fun AzkarHeader(
+    onOpenSettings: () -> Unit,
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
+) {
     val colors = AzkarThemeValues.colors
     Row(
         modifier = Modifier
@@ -242,19 +253,44 @@ internal fun AzkarHeader(onOpenSettings: () -> Unit) {
                 )
             }
         }
-        AzkarIconButton(
-            onClick = onOpenSettings,
-            modifier = Modifier
-                .semantics { contentDescription = "Настройки чтения" }
-                .testTag(AzkarReadingTestTags.OpenSettingsTop),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            BasicText(
-                text = "⚙",
-                style = AzkarThemeValues.typography.translation.copy(
-                    color = colors.foreground,
-                    fontSize = AzkarDimensions.settingsIconGlyphSp.sp,
-                ),
-            )
+            AzkarIconButton(
+                onClick = onToggleTheme,
+                modifier = Modifier
+                    .semantics {
+                        contentDescription = if (isDarkTheme) {
+                            "Включить дневную тему"
+                        } else {
+                            "Включить ночную тему"
+                        }
+                    }
+                    .testTag(AzkarReadingTestTags.ThemeToggle),
+            ) {
+                BasicText(
+                    text = if (isDarkTheme) "☀" else "☾",
+                    style = AzkarThemeValues.typography.translation.copy(
+                        color = colors.foreground,
+                        fontSize = 19.sp,
+                    ),
+                )
+            }
+            AzkarIconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .semantics { contentDescription = "Настройки чтения" }
+                    .testTag(AzkarReadingTestTags.OpenSettingsTop),
+            ) {
+                BasicText(
+                    text = "⚙",
+                    style = AzkarThemeValues.typography.translation.copy(
+                        color = colors.foreground,
+                        fontSize = AzkarDimensions.settingsIconGlyphSp.sp,
+                    ),
+                )
+            }
         }
     }
 }
@@ -648,20 +684,27 @@ internal fun AzkarDhikrCard(
                 }
             }
 
-            BasicText(
-                text = azkarArabicDisplayText(
-                    text = item.arabic,
-                    bodySizeSp = AzkarThemeValues.typography.arabicBody.fontSize.value,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        top = AzkarSpacing.arabicTop,
-                        bottom = AzkarSpacing.arabicBottom,
-                    )
-                    .testTag(AzkarReadingTestTags.Arabic),
-                style = AzkarThemeValues.typography.arabicBody.copy(color = colors.foreground),
-            )
+            if (item.id == "muawwidhat") {
+                AzkarMuawwidhatText(
+                    item = item,
+                    showTranslation = showTranslation,
+                )
+            } else {
+                BasicText(
+                    text = azkarArabicDisplayText(
+                        text = item.arabic,
+                        bodySizeSp = AzkarThemeValues.typography.arabicBody.fontSize.value,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = AzkarSpacing.arabicTop,
+                            bottom = AzkarSpacing.arabicBottom,
+                        )
+                        .testTag(AzkarReadingTestTags.Arabic),
+                    style = AzkarThemeValues.typography.arabicBody.copy(color = colors.foreground),
+                )
+            }
 
             if (showTransliteration && item.transliteration.isNotBlank()) {
                 val transliterationShape = RoundedCornerShape(AzkarRadius.noteBox)
@@ -720,7 +763,7 @@ internal fun AzkarDhikrCard(
                 }
             }
 
-            if (showTranslation) {
+            if (showTranslation && item.id != "muawwidhat") {
                 BasicText(
                     text = item.translation,
                     modifier = Modifier
@@ -802,6 +845,112 @@ internal fun AzkarDhikrCard(
                     .padding(top = AzkarSpacing.counterTop)
                     .testTag(AzkarReadingTestTags.Counter),
             )
+        }
+    }
+}
+
+@Composable
+private fun AzkarMuawwidhatText(
+    item: AzkarReadingItem,
+    showTranslation: Boolean,
+) {
+    val colors = AzkarThemeValues.colors
+    val arabicParts = item.arabic
+        .split("\n\n")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+    val translationParts = item.translation
+        .split("\n\n")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+    val titles = listOf(
+        "Аль-Ихляс · 112",
+        "Аль-Фаляк · 113",
+        "Ан-Нас · 114",
+    )
+
+    if (arabicParts.size != 3 || translationParts.size != 3) {
+        BasicText(
+            text = azkarArabicDisplayText(
+                text = item.arabic,
+                bodySizeSp = AzkarThemeValues.typography.arabicBody.fontSize.value,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = AzkarSpacing.arabicTop,
+                    bottom = AzkarSpacing.arabicBottom,
+                )
+                .testTag(AzkarReadingTestTags.Arabic),
+            style = AzkarThemeValues.typography.arabicBody.copy(color = colors.foreground),
+        )
+        if (showTranslation) {
+            BasicText(
+                text = item.translation,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .topRule(colors.border, dashed = false)
+                    .padding(top = AzkarSpacing.translationTop)
+                    .testTag(AzkarReadingTestTags.Translation),
+                style = AzkarThemeValues.typography.translation.copy(color = colors.foreground),
+            )
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                top = AzkarSpacing.arabicTop,
+                bottom = AzkarSpacing.arabicBottom,
+            ),
+    ) {
+        titles.indices.forEach { index ->
+            val sectionHeaderModifier = if (index == 0) Modifier
+                else Modifier.topRule(colors.border, dashed = false)
+            BasicText(
+                text = titles[index],
+                modifier = sectionHeaderModifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = if (index == 0) 0.dp else 9.dp,
+                        bottom = 3.dp,
+                    ),
+                style = AzkarThemeValues.typography.sourceRow.copy(
+                    color = colors.primary,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            )
+            BasicText(
+                text = azkarArabicDisplayText(
+                    text = arabicParts[index],
+                    bodySizeSp = AzkarThemeValues.typography.arabicBody.fontSize.value,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = if (showTranslation) 5.dp else 7.dp)
+                    .testTag(
+                        if (index == 0) AzkarReadingTestTags.Arabic
+                        else "${AzkarReadingTestTags.Arabic}-${index + 1}",
+                    ),
+                style = AzkarThemeValues.typography.arabicBody.copy(color = colors.foreground),
+            )
+            if (showTranslation) {
+                BasicText(
+                    text = translationParts[index],
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = if (index == titles.lastIndex) 0.dp else 9.dp)
+                        .testTag(
+                            if (index == 0) AzkarReadingTestTags.Translation
+                            else "${AzkarReadingTestTags.Translation}-${index + 1}",
+                        ),
+                    style = AzkarThemeValues.typography.translation.copy(
+                        color = colors.foreground,
+                    ),
+                )
+            }
         }
     }
 }
