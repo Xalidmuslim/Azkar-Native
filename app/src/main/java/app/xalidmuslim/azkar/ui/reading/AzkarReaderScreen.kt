@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import app.xalidmuslim.azkar.R
-import app.xalidmuslim.azkar.notifications.AzkarReminderScheduler
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
 import app.xalidmuslim.azkar.persistence.AzkarDateProvider
@@ -164,18 +163,6 @@ fun AzkarReaderScreen(
         return
     }
     val settings = readerUi.settings
-
-    LaunchedEffect(
-        settings.morningReminderEnabled,
-        settings.morningReminderMinutes,
-        settings.eveningReminderEnabled,
-        settings.eveningReminderMinutes,
-    ) {
-        AzkarReminderScheduler.sync(
-            context = context.applicationContext,
-            settings = settings,
-        )
-    }
 
     val resolvedEntries = entries.map { entry ->
         entry.copy(
