@@ -40,7 +40,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,6 +53,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -102,6 +110,8 @@ internal fun AzkarReaderSheetHost(
     viewMode: AzkarReaderViewMode,
     onDismiss: () -> Unit,
     onResetSettings: () -> Unit,
+    onDecrementProgress: (String, Int) -> Unit,
+    onResetItemProgress: (String) -> Unit,
     onSelectContents: (Int) -> Unit,
     onViewModeChange: (AzkarReaderViewMode) -> Unit,
     onUpdateSettings: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
@@ -151,8 +161,15 @@ internal fun AzkarReaderSheetHost(
             AzkarReaderSheet.Actions -> {
                 val item = entries.firstOrNull { it.item.id == selectedActionId }?.item
                     ?: entries.getOrNull(activeIndex)?.item
-                if (item != null) {
-                    AzkarActionsSheet(item = item, onDismiss = onDismiss)
+                val entry = entries.firstOrNull { it.item.id == selectedActionId }
+                    ?: entries.getOrNull(activeIndex)
+                if (entry != null) {
+                    AzkarActionsSheet(
+                        entry = entry,
+                        onDismiss = onDismiss,
+                        onDecrementProgress = onDecrementProgress,
+                        onResetItemProgress = onResetItemProgress,
+                    )
                 }
             }
             AzkarReaderSheet.None -> Unit
@@ -615,15 +632,22 @@ private fun AzkarSourceInfoSheet(onDismiss: () -> Unit) {
                 text = "Спорные оценки отмечены отдельно; подробности вынесены в примечания и разъяснения.",
                 style = AzkarThemeValues.typography.sheetSubtitle.copy(color = colors.muted),
             )
+            BasicText(
+                text = "Русский текст — смысловой перевод. Дополнительные оценки и разногласия указываются отдельно.",
+                style = AzkarThemeValues.typography.sheetSubtitle.copy(color = colors.muted),
+            )
         }
     }
 }
 
 @Composable
 private fun AzkarActionsSheet(
-    item: AzkarReadingItem,
+    entry: AzkarReaderEntry,
     onDismiss: () -> Unit,
+    onDecrementProgress: (String, Int) -> Unit,
+    onResetItemProgress: (String) -> Unit,
 ) {
+    val item = entry.item
     val clipboard = LocalClipboardManager.current
     AzkarBottomSheet(
         title = "Ещё",
@@ -664,6 +688,22 @@ private fun AzkarActionsSheet(
                     onDismiss()
                 },
             )
+            if (entry.currentCount > 0) {
+                AzkarOutlineButton(
+                    text = "Отменить последнее +1",
+                    onClick = {
+                        onDecrementProgress(item.id, item.count)
+                        onDismiss()
+                    },
+                )
+                AzkarOutlineButton(
+                    text = "Сбросить только этот азкар",
+                    onClick = {
+                        onResetItemProgress(item.id)
+                        onDismiss()
+                    },
+                )
+            }
         }
     }
 }
@@ -675,6 +715,7 @@ private fun AzkarSettingsSheet(
     onUpdateSettings: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
     onResetSettings: () -> Unit,
 ) {
+    var resetArmed by rememberSaveable { mutableStateOf(false) }
     AzkarBottomSheet(
         title = "Настройки чтения",
         eyebrow = "",
@@ -717,8 +758,15 @@ private fun AzkarSettingsSheet(
                 AzkarReadingBehaviorSettings(settings, onUpdateSettings)
                 AzkarThemeSettings(settings, onUpdateSettings)
                 AzkarOutlineButton(
-                    text = "По умолчанию",
-                    onClick = onResetSettings,
+                    text = if (resetArmed) "Подтвердить сброс настроек" else "Сбросить настройки",
+                    onClick = {
+                        if (resetArmed) {
+                            onResetSettings()
+                            resetArmed = false
+                        } else {
+                            resetArmed = true
+                        }
+                    },
                 )
             }
         }
@@ -770,7 +818,6 @@ private fun AzkarFontSettings(
             RussianFontFamily.LITERATA to "Книжный",
             RussianFontFamily.PT_SERIF to "Классика",
             RussianFontFamily.INTER to "Современный",
-            RussianFontFamily.MANROPE to "Компактный",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
             options.chunked(2).forEach { row ->
@@ -795,7 +842,6 @@ private fun AzkarFontSettings(
         val options = listOf(
             ArabicFontFamily.NOTO_NASKH_ARABIC to "Чёткий",
             ArabicFontFamily.NOTO_SANS_ARABIC to "Османский",
-            ArabicFontFamily.AMIRI to "Коранический",
             ArabicFontFamily.SCHEHERAZADE_NEW to "Каллиграфический",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
@@ -931,15 +977,33 @@ private fun AzkarValueControl(
             ),
         verticalArrangement = Arrangement.spacedBy(AzkarSpacing.controlGap),
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             BasicText(
                 text = label,
                 modifier = Modifier.weight(1f),
                 style = AzkarThemeValues.typography.sliderLabel.copy(color = colors.muted),
             )
+            AzkarStepButton(
+                text = "−",
+                enabled = value > min,
+                onClick = { onValueChange((value - step).coerceAtLeast(min)) },
+            )
             BasicText(
                 text = valueLabel,
-                style = AzkarThemeValues.typography.sliderValue.copy(color = colors.foreground),
+                modifier = Modifier.widthIn(min = 38.dp),
+                style = AzkarThemeValues.typography.sliderValue.copy(
+                    color = colors.foreground,
+                    textAlign = TextAlign.Center,
+                ),
+            )
+            AzkarStepButton(
+                text = "+",
+                enabled = value < max,
+                onClick = { onValueChange((value + step).coerceAtMost(max)) },
             )
         }
         BoxWithConstraints(
@@ -984,6 +1048,32 @@ private fun AzkarValueControl(
                     .background(colors.primary),
             )
         }
+    }
+}
+
+@Composable
+private fun AzkarStepButton(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = AzkarThemeValues.colors
+    val shape = RoundedCornerShape(8.dp)
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .clip(shape)
+            .background(colors.card)
+            .border(AzkarBorders.thin, colors.border, shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicText(
+            text = text,
+            style = AzkarThemeValues.typography.toggleText.copy(
+                color = if (enabled) colors.foreground else colors.muted,
+            ),
+        )
     }
 }
 
@@ -1079,6 +1169,10 @@ private fun AzkarToggleTile(
     Column(
         modifier = modifier
             .height(AzkarDimensions.settingsToggleTileHeight)
+            .semantics {
+                role = Role.Switch
+                stateDescription = if (checked) "Включено" else "Выключено"
+            }
             .clip(shape)
             .background(backgroundColor)
             .border(AzkarBorders.thin, borderColor, shape)
