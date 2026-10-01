@@ -2,6 +2,7 @@ package app.xalidmuslim.azkar.ui.reading
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -82,6 +83,7 @@ internal object AzkarSheetTestTags {
     const val ContentsCardsMode = "azkar-contents-mode-cards"
     const val ContentsListMode = "azkar-contents-mode-list"
     const val SettingTranslation = "azkar-setting-translation"
+    const val SettingTransliteration = "azkar-setting-transliteration"
     const val SettingSources = "azkar-setting-sources"
     const val SettingNotes = "azkar-setting-notes"
     const val ThemeLight = "azkar-theme-light"
@@ -792,7 +794,7 @@ private fun AzkarFontSettings(
     AzkarSettingsSection("Арабский шрифт") {
         val options = listOf(
             ArabicFontFamily.NOTO_NASKH_ARABIC to "Чёткий",
-            ArabicFontFamily.NOTO_SANS_ARABIC to "Мусхаф",
+            ArabicFontFamily.NOTO_SANS_ARABIC to "Османский",
             ArabicFontFamily.AMIRI to "Коранический",
             ArabicFontFamily.SCHEHERAZADE_NEW to "Каллиграфический",
         )
@@ -832,13 +834,13 @@ private fun AzkarFontTile(
         label = "font-tile-background",
     ).value
     val borderColor = animateColorAsState(
-        targetValue = if (active) colors.primary else Color.Transparent,
+        targetValue = if (active) colors.primary else colors.border,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "font-tile-border",
     ).value
     Column(
         modifier = modifier
-            .defaultMinSize(minHeight = AzkarDimensions.settingsFontTileMinHeight)
+            .height(AzkarDimensions.settingsFontTileHeight)
             .clip(shape)
             .background(backgroundColor)
             .border(AzkarBorders.thin, borderColor, shape)
@@ -922,6 +924,7 @@ private fun AzkarValueControl(
             .fillMaxWidth()
             .clip(shape)
             .background(colors.surface)
+            .border(AzkarBorders.thin, colors.border, shape)
             .padding(
                 horizontal = AzkarSpacing.controlHorizontal,
                 vertical = AzkarSpacing.controlVertical,
@@ -1013,36 +1016,43 @@ private fun AzkarVisibilitySettings(
     update: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
 ) {
     AzkarSettingsSection("Показывать") {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(AzkarRadius.toggleGrid))
-                .border(
-                    AzkarBorders.thin,
-                    AzkarThemeValues.colors.border,
-                    RoundedCornerShape(AzkarRadius.toggleGrid),
+        Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.toggleGridGap)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.toggleGridGap),
+            ) {
+                AzkarToggleTile(
+                    text = "Перевод",
+                    checked = settings.showTranslation,
+                    modifier = Modifier.weight(1f).testTag(AzkarSheetTestTags.SettingTranslation),
+                    onClick = { update { it.copy(showTranslation = !it.showTranslation) } },
                 )
-                .padding(AzkarSpacing.toggleGridPadding),
-            horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.toggleGridGap),
-        ) {
-            AzkarToggleTile(
-                text = "Перевод",
-                checked = settings.showTranslation,
-                modifier = Modifier.weight(1f).testTag(AzkarSheetTestTags.SettingTranslation),
-                onClick = { update { it.copy(showTranslation = !it.showTranslation) } },
-            )
-            AzkarToggleTile(
-                text = "Источники",
-                checked = settings.showSources,
-                modifier = Modifier.weight(1f).testTag(AzkarSheetTestTags.SettingSources),
-                onClick = { update { it.copy(showSources = !it.showSources) } },
-            )
-            AzkarToggleTile(
-                text = "Примечания",
-                checked = settings.showNotes,
-                modifier = Modifier.weight(1f).testTag(AzkarSheetTestTags.SettingNotes),
-                onClick = { update { it.copy(showNotes = !it.showNotes) } },
-            )
+                AzkarToggleTile(
+                    text = "Транскрипция",
+                    checked = settings.showTransliteration,
+                    modifier = Modifier.weight(1f).testTag(AzkarSheetTestTags.SettingTransliteration),
+                    onClick = {
+                        update { it.copy(showTransliteration = !it.showTransliteration) }
+                    },
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.toggleGridGap),
+            ) {
+                AzkarToggleTile(
+                    text = "Источники",
+                    checked = settings.showSources,
+                    modifier = Modifier.weight(1f).testTag(AzkarSheetTestTags.SettingSources),
+                    onClick = { update { it.copy(showSources = !it.showSources) } },
+                )
+                AzkarToggleTile(
+                    text = "Примечания",
+                    checked = settings.showNotes,
+                    modifier = Modifier.weight(1f).testTag(AzkarSheetTestTags.SettingNotes),
+                    onClick = { update { it.copy(showNotes = !it.showNotes) } },
+                )
+            }
         }
     }
 }
@@ -1062,13 +1072,13 @@ private fun AzkarToggleTile(
         label = "toggle-background",
     ).value
     val borderColor = animateColorAsState(
-        targetValue = if (checked) colors.primary else Color.Transparent,
+        targetValue = if (checked) colors.primary else colors.border,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "toggle-border",
     ).value
     Column(
         modifier = modifier
-            .defaultMinSize(minHeight = AzkarDimensions.toggleItemMinHeight)
+            .height(AzkarDimensions.settingsToggleTileHeight)
             .clip(shape)
             .background(backgroundColor)
             .border(AzkarBorders.thin, borderColor, shape)
@@ -1078,17 +1088,63 @@ private fun AzkarToggleTile(
                 vertical = AzkarSpacing.toggleItemVertical,
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.toggleItemGap),
+        verticalArrangement = Arrangement.Center,
     ) {
         BasicText(
-            text = if (checked) "●" else "○",
-            style = AzkarThemeValues.typography.toggleText.copy(
-                color = if (checked) colors.primary else colors.muted,
-            ),
-        )
-        BasicText(
             text = text,
+            maxLines = 1,
             style = AzkarThemeValues.typography.toggleText.copy(color = colors.foreground),
+        )
+        Row(
+            modifier = Modifier.padding(top = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BasicText(
+                text = if (checked) "Вкл" else "Выкл",
+                style = AzkarThemeValues.typography.fontTileSubtitle.copy(
+                    color = if (checked) colors.primary else colors.muted,
+                ),
+            )
+            AzkarSwitchIndicator(checked = checked)
+        }
+    }
+}
+
+@Composable
+private fun AzkarSwitchIndicator(checked: Boolean) {
+    val colors = AzkarThemeValues.colors
+    val trackColor = animateColorAsState(
+        targetValue = if (checked) colors.primary else colors.border,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "switch-track",
+    ).value
+    val thumbColor = animateColorAsState(
+        targetValue = if (checked) colors.card else colors.muted,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "switch-thumb",
+    ).value
+    val thumbOffset = animateDpAsState(
+        targetValue = if (checked) AzkarDimensions.switchCheckedLeft
+            else AzkarSpacing.switchThumbInset,
+        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
+        label = "switch-thumb-offset",
+    ).value
+
+    Box(
+        modifier = Modifier
+            .width(AzkarDimensions.switchTrackWidth)
+            .height(AzkarDimensions.switchTrackHeight)
+            .clip(RoundedCornerShape(AzkarRadius.pill))
+            .background(trackColor),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(x = thumbOffset)
+                .size(AzkarDimensions.switchThumb)
+                .clip(RoundedCornerShape(AzkarRadius.pill))
+                .background(thumbColor),
         )
     }
 }
@@ -1167,18 +1223,18 @@ private fun AzkarChoiceTile(
         label = "choice-background",
     ).value
     val borderColor = animateColorAsState(
-        targetValue = if (active) colors.primary else Color.Transparent,
+        targetValue = if (active) colors.primary else colors.border,
         animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
         label = "choice-border",
     ).value
     Box(
         modifier = modifier
-            .defaultMinSize(minHeight = 38.dp)
+            .height(AzkarDimensions.settingsChoiceTileHeight)
             .clip(shape)
             .background(backgroundColor)
             .border(AzkarBorders.thin, borderColor, shape)
             .clickable(onClick = onClick)
-            .padding(6.dp),
+            .padding(horizontal = 6.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(
