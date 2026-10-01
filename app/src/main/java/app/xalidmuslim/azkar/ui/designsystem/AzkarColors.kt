@@ -89,10 +89,10 @@ object AzkarColors {
         surface = Color(0xFFEEE8DC),
         muted = Color(0xFF646A66),
         border = Color(0xFFD8D0C1),
-        primary = Color(0xFF1F5C48),
-        accent = Color(0xFFDCE8E1),
+        primary = Color(0xFF526B61),
+        accent = Color(0xFFE0E5E1),
         warning = Color(0xFF9D6A20),
-        success = Color(0xFF2F6B52),
+        success = Color(0xFF60776C),
         countButtonText = Color.White,
     )
 
@@ -103,10 +103,10 @@ object AzkarColors {
         surface = Color(0xFF202A24),
         muted = Color(0xFFB3BDB6),
         border = Color(0xFF39463F),
-        primary = Color(0xFF8BC9AD),
-        accent = Color(0xFF20392E),
+        primary = Color(0xFF9AAEA4),
+        accent = Color(0xFF2B3631),
         warning = Color(0xFFD0A15D),
-        success = Color(0xFF82B99A),
+        success = Color(0xFF91A69B),
         countButtonText = Color(0xFF0B1410),
     )
 }
