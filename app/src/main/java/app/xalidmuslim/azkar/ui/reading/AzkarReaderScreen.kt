@@ -123,6 +123,7 @@ fun AzkarReaderScreen(
 ) {
     require(entries.isNotEmpty()) { "Reader requires at least one entry" }
 
+    val context = LocalContext.current
     val resolvedUiController = uiController ?: remember { AzkarReaderUiController() }
     val navigation = controller.state
     val readerUi = resolvedUiController.state
@@ -283,7 +284,6 @@ fun AzkarReaderScreen(
         }
     }
 
-    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val animationsEnabled = remember {
         Settings.Global.getFloat(
