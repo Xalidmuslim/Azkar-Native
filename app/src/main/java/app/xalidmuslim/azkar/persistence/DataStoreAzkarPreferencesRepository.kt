@@ -122,7 +122,9 @@ class DataStoreAzkarPreferencesRepository(
                 defaults.russianFontFamily,
             ).takeIf {
                 it == RussianFontFamily.PT_SERIF ||
-                    it == RussianFontFamily.INTER
+                    it == RussianFontFamily.INTER ||
+                    it == RussianFontFamily.ANDROID_SANS ||
+                    it == RussianFontFamily.LITERATA
             } ?: defaults.russianFontFamily,
             arabicFontFamily = enumOrDefault(
                 preferences[AzkarPreferenceKeys.ArabicFont],
@@ -131,6 +133,7 @@ class DataStoreAzkarPreferencesRepository(
             ).takeIf {
                 it == ArabicFontFamily.NOTO_NASKH_ARABIC ||
                     it == ArabicFontFamily.NOTO_SANS_ARABIC ||
+                    it == ArabicFontFamily.AMIRI ||
                     it == ArabicFontFamily.SCHEHERAZADE_NEW
             } ?: defaults.arabicFontFamily,
             arabicSizeSp = validatedFloat(
@@ -200,9 +203,17 @@ class DataStoreAzkarPreferencesRepository(
         val defaults = AzkarReaderSettings()
         return settings.copy(
             russianFontFamily = when (settings.russianFontFamily) {
+                RussianFontFamily.LITERATA,
                 RussianFontFamily.PT_SERIF,
-                RussianFontFamily.INTER -> settings.russianFontFamily
+                RussianFontFamily.INTER,
+                RussianFontFamily.ANDROID_SANS -> settings.russianFontFamily
                 else -> RussianFontFamily.PT_SERIF
+            },
+            arabicFontFamily = when (settings.arabicFontFamily) {
+                ArabicFontFamily.NOTO_NASKH_ARABIC,
+                ArabicFontFamily.NOTO_SANS_ARABIC,
+                ArabicFontFamily.AMIRI,
+                ArabicFontFamily.SCHEHERAZADE_NEW -> settings.arabicFontFamily
             },
             readerStyle = AzkarReaderStyle.Book,
             arabicSizeSp = validatedFloat(settings.arabicSizeSp, defaults.arabicSizeSp, 22f, 44f),
