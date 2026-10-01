@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +46,7 @@ import app.xalidmuslim.azkar.persistence.AzkarPreferencesRepository
 import app.xalidmuslim.azkar.persistence.SystemAzkarDateProvider
 import app.xalidmuslim.azkar.ui.designsystem.AzkarSurface
 import app.xalidmuslim.azkar.ui.designsystem.AzkarTheme
+import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeMode
 import app.xalidmuslim.azkar.ui.designsystem.AzkarThemeValues
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -164,6 +166,20 @@ fun AzkarReaderScreen(
     }
     val settings = readerUi.settings
 
+    val systemDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = when (settings.themeMode) {
+        AzkarThemeMode.Dark -> true
+        AzkarThemeMode.Light -> false
+        AzkarThemeMode.System -> systemDarkTheme
+    }
+    val toggleTheme: () -> Unit = {
+        resolvedUiController.updateSettings {
+            it.copy(
+                themeMode = if (isDarkTheme) AzkarThemeMode.Light else AzkarThemeMode.Dark,
+            )
+        }
+    }
+
     val resolvedEntries = entries.map { entry ->
         entry.copy(
             currentCount = resolvedUiController
@@ -279,13 +295,7 @@ fun AzkarReaderScreen(
             1f,
         ) > 0f
     }
-    val startOffsetPx = with(density) {
-        when (navigation.direction) {
-            AzkarNavigationDirection.Next -> AzkarMotion.nextStartOffsetX.toPx()
-            AzkarNavigationDirection.Previous -> AzkarMotion.previousStartOffsetX.toPx()
-            AzkarNavigationDirection.None -> 0f
-        }
-    }
+    val startOffsetPx = with(density) { AzkarMotion.pageStartOffsetY.toPx() }
     val initialOffset = if (navigation.generation > 0L && animationsEnabled) startOffsetPx else 0f
     val initialAlpha = if (navigation.generation > 0L && animationsEnabled) {
         AzkarMotion.dhikrStartOpacity
@@ -357,7 +367,7 @@ fun AzkarReaderScreen(
         onNext = next,
     )
     val transitionModifier = Modifier.graphicsLayer {
-        translationX = transitionOffset.value
+        translationY = transitionOffset.value
         alpha = transitionAlpha.value
     }
 
@@ -408,6 +418,8 @@ fun AzkarReaderScreen(
                         readingScrollState = readingScrollState,
                         readingAreaModifier = transitionModifier,
                         onOpenSettings = resolvedUiController::openSettings,
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = toggleTheme,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onOpenExplanation = resolvedUiController::openExplanation,
@@ -442,6 +454,8 @@ fun AzkarReaderScreen(
                         settings = settings,
                         modifier = Modifier.fillMaxSize(),
                         onOpenSettings = resolvedUiController::openSettings,
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = toggleTheme,
                         onOpenContents = resolvedUiController::openContents,
                         onOpenSourceInfo = resolvedUiController::openSourceInfo,
                         onIncrementCount = { itemId, target ->
