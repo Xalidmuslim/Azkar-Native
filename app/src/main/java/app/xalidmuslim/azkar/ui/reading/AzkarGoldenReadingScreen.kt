@@ -110,6 +110,7 @@ internal object AzkarReadingTestTags {
     const val Previous = "azkar-previous"
     const val Next = "azkar-next"
     const val OpenContents = "azkar-open-contents"
+    const val ViewModeToggle = "azkar-view-mode-toggle"
     const val OpenSettingsTop = "azkar-open-settings-top"
     const val ThemeToggle = "azkar-theme-toggle"
     const val OpenSettingsToolbar = "azkar-open-settings-toolbar"
@@ -131,6 +132,8 @@ fun AzkarGoldenReadingScreen(
     isDarkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
     onOpenContents: () -> Unit = {},
+    viewMode: AzkarReaderViewMode = AzkarReaderViewMode.Cards,
+    onViewModeChange: (AzkarReaderViewMode) -> Unit = {},
     onOpenSourceInfo: () -> Unit = {},
     onOpenExplanation: (String) -> Unit = {},
     onOpenActions: (String) -> Unit = {},
@@ -172,7 +175,13 @@ fun AzkarGoldenReadingScreen(
                 AzkarSourceNote(onOpenSourceInfo)
                 AzkarPeriodTabs(state.period, onPeriodChange)
                 AzkarProgressCard(state, onResetProgress)
-                AzkarReaderToolbar(state, narrow, onOpenContents)
+                AzkarReaderToolbar(
+                    state = state,
+                    narrow = narrow,
+                    onOpenContents = onOpenContents,
+                    viewMode = viewMode,
+                    onViewModeChange = onViewModeChange,
+                )
 
                 Box(
                     modifier = Modifier
@@ -503,6 +512,8 @@ internal fun AzkarReaderToolbar(
     state: AzkarGoldenReadingUiState,
     narrow: Boolean,
     onOpenContents: () -> Unit,
+    viewMode: AzkarReaderViewMode,
+    onViewModeChange: (AzkarReaderViewMode) -> Unit,
     positionText: String? = null,
 ) {
     val colors = AzkarThemeValues.colors
@@ -531,7 +542,22 @@ internal fun AzkarReaderToolbar(
                 style = AzkarThemeValues.typography.toolbarPosition.copy(color = colors.muted),
             )
         }
-
+        AzkarToolbarButton(
+            text = when (viewMode) {
+                AzkarReaderViewMode.Cards -> if (narrow) "Список" else "☷ Список"
+                AzkarReaderViewMode.List -> if (narrow) "По одному" else "▣ По одному"
+            },
+            onClick = {
+                onViewModeChange(
+                    if (viewMode == AzkarReaderViewMode.Cards) {
+                        AzkarReaderViewMode.List
+                    } else {
+                        AzkarReaderViewMode.Cards
+                    },
+                )
+            },
+            modifier = Modifier.testTag(AzkarReadingTestTags.ViewModeToggle),
+        )
     }
 }
 
