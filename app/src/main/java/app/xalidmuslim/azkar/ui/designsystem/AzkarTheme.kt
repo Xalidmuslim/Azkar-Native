@@ -53,7 +53,7 @@ fun AzkarTheme(
         targetValue = if (dark) 1f else 0f,
         animationSpec = tween(
             durationMillis = AzkarMotion.themeTransitionDurationMillis,
-            easing = AzkarMotion.sheetEasing,
+            easing = AzkarMotion.themeEasing,
         ),
         label = "azkar-theme-transition",
     ).value
