@@ -131,6 +131,7 @@ class DataStoreAzkarPreferencesRepository(
             ).takeIf {
                 it == ArabicFontFamily.NOTO_NASKH_ARABIC ||
                     it == ArabicFontFamily.NOTO_SANS_ARABIC ||
+                    it == ArabicFontFamily.AMIRI ||
                     it == ArabicFontFamily.SCHEHERAZADE_NEW
             } ?: defaults.arabicFontFamily,
             arabicSizeSp = validatedFloat(
