@@ -206,6 +206,8 @@ object AzkarDimensions {
     val scholarIndex = 24.dp
     val settingsFontTileMinHeight = 56.dp
     val settingsFontTileHeight = 60.dp
+    val settingsArabicFontTileHeight = 70.dp
+    val settingsArabicFontSampleHeight = 36.dp
     val settingsToggleTileHeight = 50.dp
     val settingsChoiceTileHeight = 40.dp
     val toggleItemMinHeight = 50.dp
