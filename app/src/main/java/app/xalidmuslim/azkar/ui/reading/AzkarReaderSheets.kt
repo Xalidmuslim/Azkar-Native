@@ -12,7 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,6 +45,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,10 +53,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -185,12 +191,19 @@ private fun AzkarBottomSheet(
     maxHeightFraction: Float,
     specificTestTag: String,
     headerTopPadding: Dp = AzkarSpacing.sheetHeaderTop,
+    fixedHeight: Boolean = false,
     onDismiss: () -> Unit,
     content: @Composable () -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
     val overlayInteractionSource = remember { MutableInteractionSource() }
     val sheetInteractionSource = remember { MutableInteractionSource() }
+    val density = LocalDensity.current
+    val dismissThresholdPx = with(density) { 72.dp.toPx() }
+    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
+    val dragState = rememberDraggableState { delta ->
+        dragOffsetPx = (dragOffsetPx + delta).coerceAtLeast(0f)
+    }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -210,7 +223,14 @@ private fun AzkarBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = AzkarDimensions.sheetMaxWidth)
-                .heightIn(max = maxHeight * maxHeightFraction)
+                .then(
+                    if (fixedHeight) {
+                        Modifier.height(maxHeight * maxHeightFraction)
+                    } else {
+                        Modifier.heightIn(max = maxHeight * maxHeightFraction)
+                    },
+                )
+                .graphicsLayer { translationY = dragOffsetPx }
                 .azkarShadow(AzkarElevation.BottomSheet, AzkarRadius.sheetTop)
                 .clip(sheetShape)
                 .background(colors.card)
@@ -224,13 +244,29 @@ private fun AzkarBottomSheet(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(top = AzkarSpacing.sheetHandleTop)
-                    .align(Alignment.CenterHorizontally)
-                    .width(AzkarDimensions.sheetHandleWidth)
-                    .height(AzkarDimensions.sheetHandleHeight)
-                    .clip(RoundedCornerShape(AzkarRadius.pill))
-                    .background(colors.sheetHandle),
-            )
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .draggable(
+                        state = dragState,
+                        orientation = Orientation.Vertical,
+                        onDragStopped = {
+                            if (dragOffsetPx >= dismissThresholdPx) {
+                                onDismiss()
+                            } else {
+                                dragOffsetPx = 0f
+                            }
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(AzkarDimensions.sheetHandleWidth)
+                        .height(AzkarDimensions.sheetHandleHeight)
+                        .clip(RoundedCornerShape(AzkarRadius.pill))
+                        .background(colors.sheetHandle),
+                )
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -414,6 +450,7 @@ private fun AzkarExplanationSheet(
         subtitle = null,
         maxHeightFraction = AzkarDimensions.insightSheetMaxHeightFraction,
         specificTestTag = AzkarSheetTestTags.Explanation,
+        fixedHeight = true,
         onDismiss = onDismiss,
     ) {
         Column(
@@ -428,52 +465,70 @@ private fun AzkarExplanationSheet(
                 ),
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.insightBodyGap),
         ) {
-            if (meaning.isNotBlank()) {
-                AzkarInsightSection(
-                    title = "Смысл",
-                    tone = AzkarInsightTone.Meaning,
-                    initiallyExpanded = true,
-                ) {
+            AzkarInsightSection(
+                title = "Смысл и разбор",
+                tone = AzkarInsightTone.Meaning,
+                initiallyExpanded = true,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     BasicText(
                         text = meaning,
                         style = AzkarThemeValues.typography.insightBody.copy(
                             color = colors.foreground,
                         ),
                     )
+                    if (keyMeanings.isNotEmpty()) {
+                        BasicText(
+                            text = keyMeanings.joinToString("\n\n") { "• $it" },
+                            style = AzkarThemeValues.typography.insightBody.copy(
+                                color = colors.foreground,
+                            ),
+                        )
+                    }
+                    deepDive?.let { details ->
+                        BasicText(
+                            text = details,
+                            style = AzkarThemeValues.typography.insightBody.copy(
+                                color = colors.foreground,
+                            ),
+                        )
+                    }
                 }
             }
-            if (keyMeanings.isNotEmpty()) {
-                AzkarInsightSection("Что означает", AzkarInsightTone.KeyMeaning) {
-                    BasicText(
-                        text = keyMeanings.joinToString("\n\n") { "• $it" },
-                        style = AzkarThemeValues.typography.insightBody.copy(
-                            color = colors.foreground,
-                        ),
-                    )
+
+            if (heartFocus != null || benefits.isNotEmpty() || practicalApplication != null) {
+                AzkarInsightSection("Размышление и польза", AzkarInsightTone.Heart) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        heartFocus?.let { focus ->
+                            BasicText(
+                                text = focus,
+                                style = AzkarThemeValues.typography.insightBody.copy(
+                                    color = colors.foreground,
+                                ),
+                            )
+                        }
+                        if (benefits.isNotEmpty()) {
+                            BasicText(
+                                text = benefits.joinToString("\n\n") { "• $it" },
+                                style = AzkarThemeValues.typography.insightBody.copy(
+                                    color = colors.foreground,
+                                ),
+                            )
+                        }
+                        practicalApplication?.let { application ->
+                            BasicText(
+                                text = "Практика: $application",
+                                style = AzkarThemeValues.typography.insightBody.copy(
+                                    color = colors.foreground,
+                                ),
+                            )
+                        }
+                    }
                 }
             }
-            heartFocus?.let { focus ->
-                AzkarInsightSection("О чём размышлять при чтении", AzkarInsightTone.Heart) {
-                    BasicText(
-                        text = focus,
-                        style = AzkarThemeValues.typography.insightBody.copy(
-                            color = colors.foreground,
-                        ),
-                    )
-                }
-            }
-            deepDive?.let { details ->
-                AzkarInsightSection("Раскрыть смысл глубже", AzkarInsightTone.KeyMeaning) {
-                    BasicText(
-                        text = details,
-                        style = AzkarThemeValues.typography.insightBody.copy(
-                            color = colors.foreground,
-                        ),
-                    )
-                }
-            }
+
             if (relatedReports.isNotEmpty()) {
-                AzkarInsightSection("Хадисы и связанные истории", AzkarInsightTone.Report) {
+                AzkarInsightSection("Хадисы и истории", AzkarInsightTone.Report) {
                     BasicText(
                         text = relatedReports.joinToString("\n\n") { "• $it" },
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -482,16 +537,7 @@ private fun AzkarExplanationSheet(
                     )
                 }
             }
-            itemNote?.let { note ->
-                AzkarInsightSection("Примечание", AzkarInsightTone.Note) {
-                    BasicText(
-                        text = note,
-                        style = AzkarThemeValues.typography.insightBody.copy(
-                            color = colors.foreground,
-                        ),
-                    )
-                }
-            }
+
             if (scholarNotes.isNotEmpty()) {
                 AzkarInsightSection("Слова учёных", AzkarInsightTone.Scholar) {
                     BasicText(
@@ -502,34 +548,27 @@ private fun AzkarExplanationSheet(
                     )
                 }
             }
-            if (benefits.isNotEmpty()) {
-                AzkarInsightSection("Польза", AzkarInsightTone.Benefit) {
-                    BasicText(
-                        text = benefits.joinToString("\n\n") { "• $it" },
-                        style = AzkarThemeValues.typography.insightBody.copy(
-                            color = colors.foreground,
-                        ),
-                    )
-                }
-            }
-            practicalApplication?.let { application ->
-                AzkarInsightSection("Как применить сегодня", AzkarInsightTone.Practice) {
-                    BasicText(
-                        text = application,
-                        style = AzkarThemeValues.typography.insightBody.copy(
-                            color = colors.foreground,
-                        ),
-                    )
-                }
-            }
-            if (references.isNotEmpty()) {
-                AzkarInsightSection("Источники разбора", AzkarInsightTone.Reference) {
-                    BasicText(
-                        text = references.joinToString("\n"),
-                        style = AzkarThemeValues.typography.insightReferences.copy(
-                            color = colors.muted,
-                        ),
-                    )
+
+            if (itemNote != null || references.isNotEmpty()) {
+                AzkarInsightSection("Примечания и источники", AzkarInsightTone.Reference) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        itemNote?.let { note ->
+                            BasicText(
+                                text = note,
+                                style = AzkarThemeValues.typography.insightBody.copy(
+                                    color = colors.foreground,
+                                ),
+                            )
+                        }
+                        if (references.isNotEmpty()) {
+                            BasicText(
+                                text = references.joinToString("\n"),
+                                style = AzkarThemeValues.typography.insightReferences.copy(
+                                    color = colors.muted,
+                                ),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -871,6 +910,7 @@ private fun AzkarFontSettings(
 ) {
     AzkarSettingsSection("Русский шрифт") {
         val options = listOf(
+            RussianFontFamily.LITERATA to "Книжный",
             RussianFontFamily.PT_SERIF to "Классика",
             RussianFontFamily.INTER to "Современный",
         )
