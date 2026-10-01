@@ -419,7 +419,6 @@ internal fun AzkarProgressCard(
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     val roundedPercent = if (state.total == 0) 0
     else (state.completedItems.toFloat() / state.total.toFloat() * 100f).roundToInt()
-    var resetArmed by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -448,20 +447,12 @@ internal fun AzkarProgressCard(
                 style = AzkarThemeValues.typography.progressLabel.copy(color = colors.muted),
             )
             BasicText(
-                text = if (resetArmed) "Подтвердить" else "Сбросить",
+                text = "Сбросить",
                 modifier = Modifier
-                    .clickable {
-                        if (resetArmed) {
-                            onResetProgress()
-                            resetArmed = false
-                        } else {
-                            resetArmed = true
-                        }
-                    }
+                    .clickable(role = Role.Button) { showResetDialog = true }
+                    .semantics { contentDescription = "Сбросить прогресс за сегодня" }
                     .testTag(AzkarReadingTestTags.ResetProgress),
-                style = AzkarThemeValues.typography.resetTextButton.copy(
-                    color = if (resetArmed) colors.warning else colors.muted,
-                ),
+                style = AzkarThemeValues.typography.resetTextButton.copy(color = colors.muted),
             )
         }
         AzkarProgressBar(progress = roundedPercent / 100f, animate = true)
