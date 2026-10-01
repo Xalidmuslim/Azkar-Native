@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -63,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import app.xalidmuslim.azkar.R
 import app.xalidmuslim.azkar.ui.designsystem.AzkarBorders
 import app.xalidmuslim.azkar.ui.designsystem.AzkarCardSurface
+import app.xalidmuslim.azkar.ui.designsystem.AzkarConfirmDialog
 import app.xalidmuslim.azkar.ui.designsystem.AzkarDimensions
 import app.xalidmuslim.azkar.ui.designsystem.AzkarElevation
 import app.xalidmuslim.azkar.ui.designsystem.AzkarMotion
@@ -409,6 +411,7 @@ internal fun AzkarProgressCard(
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.progressCard)
+    var showResetDialog by rememberSaveable { mutableStateOf(false) }
     val roundedPercent = if (state.total == 0) 0
     else (state.completedItems.toFloat() / state.total.toFloat() * 100f).roundToInt()
     var resetArmed by rememberSaveable { mutableStateOf(false) }
@@ -457,6 +460,15 @@ internal fun AzkarProgressCard(
             )
         }
         AzkarProgressBar(progress = roundedPercent / 100f, animate = true)
+    }
+    if (showResetDialog) {
+        AzkarConfirmDialog(
+            title = "Сбросить прогресс?",
+            message = "Будет сброшен сегодняшний прогресс всех азкаров в этом списке.",
+            confirmText = "Сбросить",
+            onConfirm = onResetProgress,
+            onDismiss = { showResetDialog = false },
+        )
     }
 }
 
@@ -838,7 +850,8 @@ private fun AzkarExplanationButton(
             .clip(shape)
             .background(colors.surface)
             .border(AzkarBorders.thin, colors.border, shape)
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = "Открыть разъяснение" },
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -1035,7 +1048,7 @@ private fun AzkarPagerButton(
     Box(
         modifier = modifier
             .alpha(if (enabled) 1f else AzkarDimensions.disabledControlAlpha)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .testTag(testTag)
             .defaultMinSize(minHeight = AzkarDimensions.pagerButtonMinHeight)
             .clip(shape)
