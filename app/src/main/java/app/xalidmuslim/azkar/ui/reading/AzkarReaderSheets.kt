@@ -138,17 +138,17 @@ internal fun AzkarReaderSheetHost(
         when (activeSheet) {
             AzkarReaderSheet.Settings -> AzkarSettingsSheet(
                 settings = settings,
+                viewMode = viewMode,
                 onDismiss = onDismiss,
                 onUpdateSettings = onUpdateSettings,
+                onViewModeChange = onViewModeChange,
                 onResetSettings = onResetSettings,
             )
             AzkarReaderSheet.Contents -> AzkarContentsSheet(
                 entries = entries,
                 activeIndex = activeIndex,
-                viewMode = viewMode,
                 onDismiss = onDismiss,
                 onSelect = onSelectContents,
-                onViewModeChange = onViewModeChange,
             )
             AzkarReaderSheet.Explanation -> {
                 val item = entries.firstOrNull { it.item.id == selectedExplanationId }?.item
@@ -288,16 +288,14 @@ private fun AzkarBottomSheet(
 private fun AzkarContentsSheet(
     entries: List<AzkarReaderEntry>,
     activeIndex: Int,
-    viewMode: AzkarReaderViewMode,
     onDismiss: () -> Unit,
     onSelect: (Int) -> Unit,
-    onViewModeChange: (AzkarReaderViewMode) -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
     AzkarBottomSheet(
         title = "Содержание",
         eyebrow = "Навигация",
-        subtitle = if (viewMode == AzkarReaderViewMode.Cards) "По одному" else "Список",
+        subtitle = "Выберите азкар",
         maxHeightFraction = AzkarDimensions.sheetMaxHeightFraction,
         specificTestTag = AzkarSheetTestTags.Contents,
         onDismiss = onDismiss,
@@ -314,28 +312,6 @@ private fun AzkarContentsSheet(
                 ),
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.contentsListGap),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.styleGridGap),
-            ) {
-                AzkarChoiceTile(
-                    text = "По одному",
-                    active = viewMode == AzkarReaderViewMode.Cards,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(AzkarSheetTestTags.ContentsCardsMode),
-                    onClick = { onViewModeChange(AzkarReaderViewMode.Cards) },
-                )
-                AzkarChoiceTile(
-                    text = "Список",
-                    active = viewMode == AzkarReaderViewMode.List,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(AzkarSheetTestTags.ContentsListMode),
-                    onClick = { onViewModeChange(AzkarReaderViewMode.List) },
-                )
-            }
-
             entries.forEachIndexed { index, entry ->
                 val active = index == activeIndex
                 val completed = entry.currentCount >= entry.item.count
@@ -730,8 +706,10 @@ private fun AzkarActionsSheet(
 @Composable
 private fun AzkarSettingsSheet(
     settings: AzkarReaderSettings,
+    viewMode: AzkarReaderViewMode,
     onDismiss: () -> Unit,
     onUpdateSettings: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
+    onViewModeChange: (AzkarReaderViewMode) -> Unit,
     onResetSettings: () -> Unit,
 ) {
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
@@ -772,6 +750,7 @@ private fun AzkarSettingsSheet(
             ) {
                 AzkarFontSettings(settings, onUpdateSettings)
                 AzkarSizeSettings(settings, onUpdateSettings)
+                AzkarViewModeSettings(viewMode, onViewModeChange)
                 AzkarStyleSettings(settings, onUpdateSettings)
                 AzkarVisibilitySettings(settings, onUpdateSettings)
                 AzkarReadingBehaviorSettings(settings, onUpdateSettings)
@@ -976,6 +955,16 @@ private fun AzkarSizeSettings(
             )
             AzkarControlDivider()
             AzkarValueControl(
+                label = "Транскрипция",
+                valueLabel = settings.transliterationSizeSp.roundToInt().toString(),
+                value = settings.transliterationSizeSp,
+                min = AzkarDimensions.transliterationSizeMinSp,
+                max = AzkarDimensions.transliterationSizeMaxSp,
+                step = AzkarDimensions.transliterationSizeStepSp,
+                onValueChange = { v -> update { it.copy(transliterationSizeSp = v) } },
+            )
+            AzkarControlDivider()
+            AzkarValueControl(
                 label = "Межстрочный",
                 valueLabel = String.format("%.2f", settings.lineHeight),
                 value = settings.lineHeight,
@@ -1113,6 +1102,29 @@ private fun AzkarStepButton(
                 color = if (enabled) colors.foreground else colors.muted,
             ),
         )
+    }
+}
+
+@Composable
+private fun AzkarViewModeSettings(
+    viewMode: AzkarReaderViewMode,
+    onViewModeChange: (AzkarReaderViewMode) -> Unit,
+) {
+    AzkarSettingsSection("Режим просмотра") {
+        Row(horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.styleGridGap)) {
+            AzkarChoiceTile(
+                text = "По одному",
+                active = viewMode == AzkarReaderViewMode.Cards,
+                modifier = Modifier.weight(1f),
+                onClick = { onViewModeChange(AzkarReaderViewMode.Cards) },
+            )
+            AzkarChoiceTile(
+                text = "Список",
+                active = viewMode == AzkarReaderViewMode.List,
+                modifier = Modifier.weight(1f),
+                onClick = { onViewModeChange(AzkarReaderViewMode.List) },
+            )
+        }
     }
 }
 
