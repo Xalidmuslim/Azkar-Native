@@ -89,16 +89,8 @@ fun AzkarCardSurface(
     val horizontal = if (compact) AzkarSpacing.compactCard else AzkarSpacing.cardHorizontal
     val bottom = if (compact) AzkarSpacing.compactCard else AzkarSpacing.cardBottom
     val shape = RoundedCornerShape(AzkarRadius.dhikrCard)
-    val cardBackground by androidx.compose.animation.animateColorAsState(
-        targetValue = if (completed) colors.doneMarkerBackground else colors.card,
-        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
-        label = "dhikr-card-background",
-    )
-    val cardBorder by androidx.compose.animation.animateColorAsState(
-        targetValue = if (completed) colors.doneCardBorder else colors.border,
-        animationSpec = tween(AzkarMotion.stateTransitionDurationMillis),
-        label = "dhikr-card-border",
-    )
+    val cardBackground = if (completed) colors.doneMarkerBackground else colors.card
+    val cardBorder = if (completed) colors.doneCardBorder else colors.border
 
     Box(
         modifier = modifier
