@@ -94,7 +94,6 @@ internal fun AzkarListReadingScreen(
                         state = summaryState,
                         narrow = narrow,
                         onOpenContents = onOpenContents,
-                        onOpenSettings = onOpenSettings,
                         positionText = "Список",
                     )
                 }
