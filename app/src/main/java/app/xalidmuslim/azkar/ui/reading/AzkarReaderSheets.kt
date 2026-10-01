@@ -381,7 +381,14 @@ private fun AzkarExplanationSheet(
     val explanation = item.explanation
     val extra = AzkarExplanationEnrichment.forId(item.id)
     val meaning = explanation?.meaning?.takeIf { it.isNotBlank() } ?: item.translation
-    val relatedReport = explanation?.relatedReport?.takeIf { it.isNotBlank() }
+    val relatedReports = buildList {
+        explanation?.relatedReport?.takeIf { it.isNotBlank() }?.let(::add)
+        AzkarExplanationEnrichment.reportsForId(item.id)
+            .filter { it.isNotBlank() }
+            .let(::addAll)
+    }.distinct()
+    val deepDive = AzkarExplanationEnrichment.deepDiveForId(item.id)
+        .takeIf { it.isNotBlank() }
     val keyMeanings = extra.keyMeanings.filter { it.isNotBlank() }
     val heartFocus = extra.heartFocus?.takeIf { it.isNotBlank() }
     val benefits = extra.benefits.filter { it.isNotBlank() }
@@ -420,7 +427,11 @@ private fun AzkarExplanationSheet(
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.insightBodyGap),
         ) {
             if (meaning.isNotBlank()) {
-                AzkarInsightSection("Смысл", AzkarInsightTone.Meaning) {
+                AzkarInsightSection(
+                    title = "Смысл",
+                    tone = AzkarInsightTone.Meaning,
+                    initiallyExpanded = true,
+                ) {
                     BasicText(
                         text = meaning,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -449,10 +460,20 @@ private fun AzkarExplanationSheet(
                     )
                 }
             }
-            relatedReport?.let { report ->
-                AzkarInsightSection("Связанный хадис или случай", AzkarInsightTone.Report) {
+            deepDive?.let { details ->
+                AzkarInsightSection("Раскрыть смысл глубже", AzkarInsightTone.KeyMeaning) {
                     BasicText(
-                        text = report,
+                        text = details,
+                        style = AzkarThemeValues.typography.insightBody.copy(
+                            color = colors.foreground,
+                        ),
+                    )
+                }
+            }
+            if (relatedReports.isNotEmpty()) {
+                AzkarInsightSection("Хадисы и связанные истории", AzkarInsightTone.Report) {
+                    BasicText(
+                        text = relatedReports.joinToString("\n\n") { "• $it" },
                         style = AzkarThemeValues.typography.insightBody.copy(
                             color = colors.foreground,
                         ),
@@ -529,10 +550,12 @@ private enum class AzkarInsightTone {
 private fun AzkarInsightSection(
     title: String,
     tone: AzkarInsightTone,
+    initiallyExpanded: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
     val shape = RoundedCornerShape(AzkarRadius.insightSection)
+    var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
     val accent = when (tone) {
         AzkarInsightTone.Meaning -> Color(0xFFA8865E)
         AzkarInsightTone.KeyMeaning -> Color(0xFF72866F)
@@ -544,8 +567,8 @@ private fun AzkarInsightSection(
         AzkarInsightTone.Practice -> Color(0xFFA17A68)
         AzkarInsightTone.Reference -> Color(0xFF798386)
     }
-    val background = lerp(colors.surface, accent, 0.10f)
-    val border = lerp(colors.border, accent, 0.34f)
+    val background = lerp(colors.surface, accent, if (expanded) 0.10f else 0.06f)
+    val border = lerp(colors.border, accent, 0.30f)
     val heading = lerp(colors.foreground, accent, 0.48f)
 
     Column(
@@ -558,21 +581,36 @@ private fun AzkarInsightSection(
         verticalArrangement = Arrangement.spacedBy(AzkarSpacing.scholarTop),
     ) {
         Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .semantics {
+                    contentDescription = if (expanded) "$title. Свернуть" else "$title. Раскрыть"
+                },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .size(4.dp)
+                    .clip(CircleShape)
                     .background(heading),
             )
             BasicText(
                 text = title,
+                modifier = Modifier.weight(1f),
                 style = AzkarThemeValues.typography.sectionHeading.copy(color = heading),
             )
+            BasicText(
+                text = if (expanded) "⌃" else "⌄",
+                style = AzkarThemeValues.typography.sectionHeading.copy(color = colors.muted),
+            )
         }
-        content()
+        AnimatedVisibility(visible = expanded) {
+            Box(modifier = Modifier.padding(top = 2.dp)) {
+                content()
+            }
+        }
     }
 }
 
