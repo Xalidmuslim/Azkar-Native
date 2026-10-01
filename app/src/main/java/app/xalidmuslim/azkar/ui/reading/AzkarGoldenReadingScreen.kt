@@ -132,6 +132,7 @@ fun AzkarGoldenReadingScreen(
     compactReader: Boolean = false,
     showTranslation: Boolean = true,
     showTransliteration: Boolean = false,
+    transliterationSizeSp: Float = AzkarDimensions.defaultTransliterationSizeSp,
     showSources: Boolean = true,
     showNotes: Boolean = true,
     canPrevious: Boolean = state.position > 1,
@@ -176,6 +177,7 @@ fun AzkarGoldenReadingScreen(
                     compactReader = compactReader,
                     showTranslation = showTranslation,
                     showTransliteration = showTransliteration,
+                    transliterationSizeSp = transliterationSizeSp,
                     showSources = showSources,
                     showNotes = showNotes,
                     onOpenExplanation = { onOpenExplanation(state.item.id) },
@@ -529,6 +531,7 @@ internal fun AzkarDhikrCard(
     compactReader: Boolean,
     showTranslation: Boolean,
     showTransliteration: Boolean,
+    transliterationSizeSp: Float,
     showSources: Boolean,
     showNotes: Boolean,
     onOpenExplanation: () -> Unit,
@@ -709,8 +712,8 @@ internal fun AzkarDhikrCard(
                                 .padding(top = 6.dp),
                             style = AzkarThemeValues.typography.translation.copy(
                                 color = colors.muted,
-                                fontSize = (AzkarThemeValues.typography.translation.fontSize.value - 1f)
-                                    .coerceAtLeast(13f).sp,
+                                fontSize = transliterationSizeSp.sp,
+                                lineHeight = (transliterationSizeSp * 1.45f).sp,
                             ),
                         )
                     }
@@ -916,18 +919,29 @@ private fun azkarArabicDisplayText(
     text: String,
     bodySizeSp: Float,
 ): AnnotatedString = buildAnnotatedString {
-    text.forEach { character ->
-        if (character == '،') {
-            pushStyle(
-                SpanStyle(
-                    fontFamily = AzkarFontFamilies.NotoNaskhArabic,
-                    fontSize = (bodySizeSp * 0.30f).coerceAtLeast(7f).sp,
-                ),
-            )
-            append(character)
-            pop()
-        } else {
-            append(character)
+    val compactText = text.replace(Regex("\\n[\\t ]*\\n+"), "\n")
+    compactText.forEach { character ->
+        when (character) {
+            '،' -> {
+                pushStyle(
+                    SpanStyle(
+                        fontFamily = AzkarFontFamilies.NotoNaskhArabic,
+                        fontSize = (bodySizeSp * 0.76f).coerceAtLeast(13f).sp,
+                    ),
+                )
+                append(character)
+                pop()
+            }
+            '۝' -> {
+                pushStyle(
+                    SpanStyle(
+                        fontSize = (bodySizeSp * 0.20f).coerceAtLeast(5f).sp,
+                    ),
+                )
+                append(character)
+                pop()
+            }
+            else -> append(character)
         }
     }
 }
