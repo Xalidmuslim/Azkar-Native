@@ -1,4 +1,13 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <solid android:color="@android:color/transparent" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:left="14dp"
+        android:top="14dp"
+        android:right="14dp"
+        android:bottom="14dp">
+        <bitmap
+            android:src="@drawable/azkar_launcher_exact"
+            android:gravity="fill"
+            android:antialias="true"
+            android:filter="true" />
+    </item>
+</layer-list>
