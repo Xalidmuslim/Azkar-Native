@@ -1,6 +1,9 @@
 package app.xalidmuslim.azkar.ui.reading
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -747,7 +750,18 @@ internal fun AzkarDhikrCard(
                             style = AzkarThemeValues.typography.sourceRow.copy(color = colors.muted),
                         )
                     }
-                    AnimatedVisibility(visible = transliterationExpanded) {
+                    AnimatedVisibility(
+                        visible = transliterationExpanded,
+                        enter = fadeIn(tween(AzkarMotion.toggleDurationMillis)) +
+                            slideInVertically(
+                                animationSpec = tween(
+                                    durationMillis = AzkarMotion.toggleDurationMillis,
+                                    easing = AzkarMotion.sheetEasing,
+                                ),
+                                initialOffsetY = { (-it * 0.02f).roundToInt() },
+                            ),
+                        exit = fadeOut(tween(AzkarMotion.toggleDurationMillis)),
+                    ) {
                         BasicText(
                             text = item.transliteration,
                             modifier = Modifier
