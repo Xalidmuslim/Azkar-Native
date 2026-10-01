@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.ContentScale
@@ -441,7 +442,7 @@ internal fun AzkarProgressCard(
                 style = AzkarThemeValues.typography.progressLabel.copy(color = colors.muted),
             )
             BasicText(
-                text = if (resetArmed) "Подтвердить сброс" else "Сбросить",
+                text = if (resetArmed) "Подтвердить" else "Сбросить",
                 modifier = Modifier
                     .clickable {
                         if (resetArmed) {
@@ -860,6 +861,7 @@ private fun AzkarExplanationButton(
                 painter = painterResource(R.drawable.ic_explanation),
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
+                colorFilter = ColorFilter.tint(colors.muted),
             )
             BasicText(
                 text = "Разъяснение",
