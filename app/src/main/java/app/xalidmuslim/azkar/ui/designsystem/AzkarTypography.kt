@@ -128,7 +128,7 @@ object AzkarTypography {
 
     fun create(
         russianFont: RussianFontFamily = RussianFontFamily.LITERATA,
-        arabicFont: ArabicFontFamily = ArabicFontFamily.NOTO_NASKH_ARABIC,
+        arabicFont: ArabicFontFamily = ArabicFontFamily.NOTO_SANS_ARABIC,
         arabicSizeSp: Float = AzkarDimensions.defaultArabicSizeSp,
         russianSizeSp: Float = AzkarDimensions.defaultRussianSizeSp,
         readerLineHeight: Float = AzkarDimensions.defaultReaderLineHeight,
