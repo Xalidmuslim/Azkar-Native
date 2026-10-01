@@ -41,6 +41,10 @@ class DataStoreAzkarPreferencesRepository(
             preferences[AzkarPreferenceKeys.ShowSources] = safe.showSources
             preferences[AzkarPreferenceKeys.ShowNotes] = safe.showNotes
             preferences[AzkarPreferenceKeys.HideCompleted] = safe.hideCompleted
+            preferences[AzkarPreferenceKeys.MorningReminderEnabled] = safe.morningReminderEnabled
+            preferences[AzkarPreferenceKeys.MorningReminderMinutes] = safe.morningReminderMinutes
+            preferences[AzkarPreferenceKeys.EveningReminderEnabled] = safe.eveningReminderEnabled
+            preferences[AzkarPreferenceKeys.EveningReminderMinutes] = safe.eveningReminderMinutes
             preferences[AzkarPreferenceKeys.Theme] = safe.themeMode.name
         }
     }
@@ -160,6 +164,10 @@ class DataStoreAzkarPreferencesRepository(
             showSources = preferences[AzkarPreferenceKeys.ShowSources] ?: true,
             showNotes = preferences[AzkarPreferenceKeys.ShowNotes] ?: true,
             hideCompleted = preferences[AzkarPreferenceKeys.HideCompleted] ?: false,
+            morningReminderEnabled = preferences[AzkarPreferenceKeys.MorningReminderEnabled] ?: false,
+            morningReminderMinutes = (preferences[AzkarPreferenceKeys.MorningReminderMinutes] ?: 7 * 60).coerceIn(0, 1439),
+            eveningReminderEnabled = preferences[AzkarPreferenceKeys.EveningReminderEnabled] ?: false,
+            eveningReminderMinutes = (preferences[AzkarPreferenceKeys.EveningReminderMinutes] ?: 18 * 60).coerceIn(0, 1439),
             themeMode = enumOrDefault(
                 preferences[AzkarPreferenceKeys.Theme],
                 AzkarThemeMode.values(),
@@ -199,6 +207,8 @@ class DataStoreAzkarPreferencesRepository(
             arabicSizeSp = validatedFloat(settings.arabicSizeSp, defaults.arabicSizeSp, 22f, 44f),
             russianSizeSp = validatedFloat(settings.russianSizeSp, defaults.russianSizeSp, 13f, 25f),
             lineHeight = validatedFloat(settings.lineHeight, defaults.lineHeight, 1.25f, 2.00f),
+            morningReminderMinutes = settings.morningReminderMinutes.coerceIn(0, 1439),
+            eveningReminderMinutes = settings.eveningReminderMinutes.coerceIn(0, 1439),
         )
     }
 
