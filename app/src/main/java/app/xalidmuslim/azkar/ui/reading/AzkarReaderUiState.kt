@@ -41,6 +41,7 @@ data class AzkarReaderSettings(
     val arabicFontFamily: ArabicFontFamily = ArabicFontFamily.NOTO_SANS_ARABIC,
     val arabicSizeSp: Float = AzkarDimensions.defaultArabicSizeSp,
     val russianSizeSp: Float = AzkarDimensions.defaultRussianSizeSp,
+    val transliterationSizeSp: Float = AzkarDimensions.defaultTransliterationSizeSp,
     val lineHeight: Float = AzkarDimensions.defaultReaderLineHeight,
     val readerStyle: AzkarReaderStyle = AzkarReaderStyle.Book,
     val showTranslation: Boolean = true,
