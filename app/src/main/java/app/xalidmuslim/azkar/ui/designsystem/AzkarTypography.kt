@@ -127,7 +127,7 @@ object AzkarTypography {
     )
 
     fun create(
-        russianFont: RussianFontFamily = RussianFontFamily.LITERATA,
+        russianFont: RussianFontFamily = RussianFontFamily.PT_SERIF,
         arabicFont: ArabicFontFamily = ArabicFontFamily.NOTO_SANS_ARABIC,
         arabicSizeSp: Float = AzkarDimensions.defaultArabicSizeSp,
         russianSizeSp: Float = AzkarDimensions.defaultRussianSizeSp,
@@ -191,7 +191,12 @@ object AzkarTypography {
             fontTileTitle = TextStyle(fontFamily = reader, fontSize = 13.sp, lineHeight = 15.sp),
             fontTileSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 10.sp, lineHeight = 12.sp),
             fontTileSample = TextStyle(fontFamily = reader, fontSize = 12.sp, lineHeight = 14.sp),
-            arabicFontTileSample = TextStyle(fontFamily = arabic, fontSize = 18.sp),
+            arabicFontTileSample = TextStyle(
+                fontFamily = arabic,
+                fontSize = 18.sp,
+                lineHeight = 25.sp,
+                platformStyle = PlatformTextStyle(includeFontPadding = true),
+            ),
             sliderLabel = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 11.sp),
             sliderValue = TextStyle(fontFamily = inter, fontWeight = FontWeight.Bold, fontSize = 12.sp),
             toggleText = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
