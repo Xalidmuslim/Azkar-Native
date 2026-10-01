@@ -12,6 +12,7 @@ internal object AzkarPreferenceKeys {
     val ArabicFont = stringPreferencesKey("reader_arabic_font")
     val ArabicSize = floatPreferencesKey("reader_arabic_size")
     val RussianSize = floatPreferencesKey("reader_russian_size")
+    val TransliterationSize = floatPreferencesKey("reader_transliteration_size")
     val LineHeight = floatPreferencesKey("reader_line_height")
     val ReaderStyle = stringPreferencesKey("reader_style")
     val ShowTranslation = booleanPreferencesKey("reader_show_translation")
