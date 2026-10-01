@@ -1,10 +1,5 @@
 package app.xalidmuslim.azkar.ui.reading
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -57,7 +52,6 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
@@ -69,9 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import app.xalidmuslim.azkar.content.AzkarExplanationEnrichment
-import app.xalidmuslim.azkar.content.AzkarPeriod
 import app.xalidmuslim.azkar.ui.designsystem.ArabicFontFamily
 import app.xalidmuslim.azkar.ui.designsystem.AzkarBorders
 import app.xalidmuslim.azkar.ui.designsystem.AzkarConfirmDialog
@@ -783,7 +775,6 @@ private fun AzkarSettingsSheet(
                 AzkarStyleSettings(settings, onUpdateSettings)
                 AzkarVisibilitySettings(settings, onUpdateSettings)
                 AzkarReadingBehaviorSettings(settings, onUpdateSettings)
-                AzkarReminderSettings(settings, onUpdateSettings)
                 AzkarThemeSettings(settings, onUpdateSettings)
                 AzkarOutlineButton(
                     text = "Сбросить настройки",
@@ -1302,162 +1293,6 @@ private fun AzkarReadingBehaviorSettings(
             modifier = Modifier.fillMaxWidth(),
             onClick = { update { it.copy(hideCompleted = !it.hideCompleted) } },
         )
-    }
-}
-
-@Composable
-private fun AzkarReminderSettings(
-    settings: AzkarReaderSettings,
-    update: ((AzkarReaderSettings) -> AzkarReaderSettings) -> Unit,
-) {
-    val context = LocalContext.current
-    var pendingEnable by rememberSaveable { mutableStateOf<String?>(null) }
-
-    fun setEnabled(period: AzkarPeriod, enabled: Boolean) {
-        update {
-            when (period) {
-                AzkarPeriod.Morning -> it.copy(morningReminderEnabled = enabled)
-                AzkarPeriod.Evening -> it.copy(eveningReminderEnabled = enabled)
-            }
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        val pending = pendingEnable
-        pendingEnable = null
-        if (granted) {
-            when (pending) {
-                AzkarPeriod.Morning.name -> setEnabled(AzkarPeriod.Morning, true)
-                AzkarPeriod.Evening.name -> setEnabled(AzkarPeriod.Evening, true)
-            }
-        }
-    }
-
-    fun toggle(period: AzkarPeriod, enabled: Boolean) {
-        if (enabled) {
-            setEnabled(period, false)
-            return
-        }
-
-        val permissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED
-
-        if (permissionGranted) {
-            setEnabled(period, true)
-        } else {
-            pendingEnable = period.name
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
-    AzkarSettingsSection("Напоминания") {
-        Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.toggleGridGap)) {
-            AzkarReminderRow(
-                title = "Утро",
-                enabled = settings.morningReminderEnabled,
-                minutes = settings.morningReminderMinutes,
-                onToggle = {
-                    toggle(AzkarPeriod.Morning, settings.morningReminderEnabled)
-                },
-                onMinutesChange = { minutes ->
-                    update { it.copy(morningReminderMinutes = minutes) }
-                },
-            )
-            AzkarReminderRow(
-                title = "Вечер",
-                enabled = settings.eveningReminderEnabled,
-                minutes = settings.eveningReminderMinutes,
-                onToggle = {
-                    toggle(AzkarPeriod.Evening, settings.eveningReminderEnabled)
-                },
-                onMinutesChange = { minutes ->
-                    update { it.copy(eveningReminderMinutes = minutes) }
-                },
-            )
-            BasicText(
-                text = "Время задаётся по часам телефона. Android может немного задержать напоминание из-за энергосбережения.",
-                style = AzkarThemeValues.typography.fontTileSubtitle.copy(
-                    color = AzkarThemeValues.colors.muted,
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun AzkarReminderRow(
-    title: String,
-    enabled: Boolean,
-    minutes: Int,
-    onToggle: () -> Unit,
-    onMinutesChange: (Int) -> Unit,
-) {
-    val colors = AzkarThemeValues.colors
-    val shape = RoundedCornerShape(AzkarRadius.control)
-    val safeMinutes = minutes.coerceIn(0, 1439)
-    val timeLabel = "%02d:%02d".format(safeMinutes / 60, safeMinutes % 60)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(AzkarDimensions.settingsFontTileHeight)
-            .clip(shape)
-            .background(colors.surface)
-            .border(
-                AzkarBorders.thin,
-                if (enabled) colors.primary else colors.border,
-                shape,
-            )
-            .padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            BasicText(
-                text = title,
-                style = AzkarThemeValues.typography.toggleText.copy(color = colors.foreground),
-            )
-            BasicText(
-                text = if (enabled) "Вкл" else "Выкл",
-                style = AzkarThemeValues.typography.fontTileSubtitle.copy(
-                    color = if (enabled) colors.primary else colors.muted,
-                ),
-            )
-        }
-        AzkarStepButton(
-            text = "−",
-            enabled = true,
-            onClick = { onMinutesChange((safeMinutes - 15 + 1440) % 1440) },
-        )
-        BasicText(
-            text = timeLabel,
-            modifier = Modifier.widthIn(min = 44.dp),
-            style = AzkarThemeValues.typography.sliderValue.copy(
-                color = colors.foreground,
-                textAlign = TextAlign.Center,
-            ),
-        )
-        AzkarStepButton(
-            text = "+",
-            enabled = true,
-            onClick = { onMinutesChange((safeMinutes + 15) % 1440) },
-        )
-        Box(
-            modifier = Modifier
-                .semantics {
-                    stateDescription = if (enabled) "Включено" else "Выключено"
-                }
-                .clickable(role = Role.Switch, onClick = onToggle)
-                .padding(4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            AzkarSwitchIndicator(checked = enabled)
-        }
     }
 }
 
