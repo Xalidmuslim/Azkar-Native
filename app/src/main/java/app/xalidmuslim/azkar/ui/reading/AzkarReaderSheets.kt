@@ -54,7 +54,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -1210,13 +1209,12 @@ private fun AzkarToggleTile(
         modifier = modifier
             .height(AzkarDimensions.settingsToggleTileHeight)
             .semantics {
-                role = Role.Switch
                 stateDescription = if (checked) "Включено" else "Выключено"
             }
             .clip(shape)
             .background(backgroundColor)
             .border(AzkarBorders.thin, borderColor, shape)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Switch, onClick = onClick)
             .padding(
                 horizontal = AzkarSpacing.toggleItemHorizontal,
                 vertical = AzkarSpacing.toggleItemVertical,
