@@ -79,6 +79,21 @@ class DataStoreAzkarPreferencesRepository(
         return (result[key] ?: 0).coerceIn(0, safeTarget)
     }
 
+    override suspend fun decrementProgress(
+        date: LocalDate,
+        stableDhikrId: String,
+        target: Int,
+    ): Int {
+        if (stableDhikrId.isBlank()) return 0
+        val safeTarget = target.coerceAtLeast(1)
+        val key = AzkarPreferenceKeys.progress(date, stableDhikrId)
+        val result = dataStore.edit { preferences ->
+            val current = (preferences[key] ?: 0).coerceIn(0, safeTarget)
+            preferences[key] = (current - 1).coerceAtLeast(0)
+        }
+        return (result[key] ?: 0).coerceIn(0, safeTarget)
+    }
+
     override suspend fun resetProgress(
         date: LocalDate,
         visibleItemIds: Set<String>,
