@@ -53,7 +53,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -394,7 +393,6 @@ private fun AzkarPeriodButton(
             .defaultMinSize(minHeight = AzkarDimensions.periodButtonMinHeight)
             .clip(shape)
             .semantics {
-                role = Role.Tab
                 contentDescription = if (active) "$text, выбрано" else text
             }
             .clickable(enabled = !active, role = Role.Tab, onClick = onClick)
