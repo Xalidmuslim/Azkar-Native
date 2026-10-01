@@ -865,6 +865,7 @@ private fun AzkarFontSettings(
         val options = listOf(
             ArabicFontFamily.NOTO_NASKH_ARABIC to "Чёткий",
             ArabicFontFamily.NOTO_SANS_ARABIC to "Османский",
+            ArabicFontFamily.AMIRI to "Мусхаф",
             ArabicFontFamily.SCHEHERAZADE_NEW to "Каллиграфический",
         )
         Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.fontGridGap)) {
