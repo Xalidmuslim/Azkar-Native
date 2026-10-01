@@ -928,7 +928,7 @@ private fun azkarArabicDisplayText(
                 pushStyle(
                     SpanStyle(
                         fontFamily = AzkarFontFamilies.NotoNaskhArabic,
-                        fontSize = (bodySizeSp * 1.10f).coerceAtLeast(18f).sp,
+                        fontSize = (bodySizeSp * 1.24f).coerceAtLeast(20f).sp,
                     ),
                 )
                 append(character)
@@ -937,7 +937,7 @@ private fun azkarArabicDisplayText(
             '۝' -> {
                 pushStyle(
                     SpanStyle(
-                        fontSize = (bodySizeSp * 0.10f).coerceAtLeast(3.5f).sp,
+                        fontSize = (bodySizeSp * 0.055f).coerceIn(2.2f, 2.8f).sp,
                     ),
                 )
                 append(character)
