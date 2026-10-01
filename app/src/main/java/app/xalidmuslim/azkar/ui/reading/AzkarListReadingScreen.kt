@@ -38,6 +38,8 @@ internal fun AzkarListReadingScreen(
     settings: AzkarReaderSettings,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit,
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
     onOpenContents: () -> Unit,
     onOpenSourceInfo: () -> Unit,
     onIncrementCount: (String, Int) -> Unit,
@@ -82,7 +84,11 @@ internal fun AzkarListReadingScreen(
             ) {
                 item(key = "reader-header") {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        AzkarHeader(onOpenSettings)
+                        AzkarHeader(
+                            onOpenSettings = onOpenSettings,
+                            isDarkTheme = isDarkTheme,
+                            onToggleTheme = onToggleTheme,
+                        )
                         AzkarSourceNote(onOpenSourceInfo)
                         AzkarPeriodTabs(period, onPeriodChange)
                         AzkarProgressCard(summaryState, onResetProgress)
