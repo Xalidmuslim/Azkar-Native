@@ -297,13 +297,7 @@ fun AzkarReaderScreen(
             1f,
         ) > 0f
     }
-    val startOffsetPx = with(density) {
-        when (navigation.direction) {
-            AzkarNavigationDirection.Next -> AzkarMotion.nextStartOffsetX.toPx()
-            AzkarNavigationDirection.Previous -> AzkarMotion.previousStartOffsetX.toPx()
-            AzkarNavigationDirection.None -> 0f
-        }
-    }
+    val startOffsetPx = with(density) { AzkarMotion.pageStartOffsetY.toPx() }
     val initialOffset = if (navigation.generation > 0L && animationsEnabled) startOffsetPx else 0f
     val initialAlpha = if (navigation.generation > 0L && animationsEnabled) {
         AzkarMotion.dhikrStartOpacity
@@ -375,7 +369,7 @@ fun AzkarReaderScreen(
         onNext = next,
     )
     val transitionModifier = Modifier.graphicsLayer {
-        translationX = transitionOffset.value
+        translationY = transitionOffset.value
         alpha = transitionAlpha.value
     }
 
