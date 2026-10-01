@@ -2,12 +2,14 @@ package app.xalidmuslim.azkar.ui.reading
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -649,7 +651,14 @@ private fun AzkarInsightSection(
         }
         AnimatedVisibility(
             visible = expanded,
-            enter = fadeIn(tween(AzkarMotion.toggleDurationMillis)) +
+            enter = expandVertically(
+                animationSpec = tween(
+                    durationMillis = AzkarMotion.toggleDurationMillis,
+                    easing = AzkarMotion.sheetEasing,
+                ),
+                expandFrom = Alignment.Top,
+            ) +
+                fadeIn(tween(AzkarMotion.toggleDurationMillis)) +
                 slideInVertically(
                     animationSpec = tween(
                         durationMillis = AzkarMotion.toggleDurationMillis,
@@ -657,7 +666,21 @@ private fun AzkarInsightSection(
                     ),
                     initialOffsetY = { (-it * 0.02f).roundToInt() },
                 ),
-            exit = fadeOut(tween(AzkarMotion.toggleDurationMillis)),
+            exit = shrinkVertically(
+                animationSpec = tween(
+                    durationMillis = AzkarMotion.toggleDurationMillis,
+                    easing = AzkarMotion.sheetEasing,
+                ),
+                shrinkTowards = Alignment.Top,
+            ) +
+                fadeOut(tween(AzkarMotion.toggleDurationMillis)) +
+                slideOutVertically(
+                    animationSpec = tween(
+                        durationMillis = AzkarMotion.toggleDurationMillis,
+                        easing = AzkarMotion.sheetEasing,
+                    ),
+                    targetOffsetY = { (-it * 0.02f).roundToInt() },
+                ),
         ) {
             Box(modifier = Modifier.padding(top = 2.dp)) {
                 content()
