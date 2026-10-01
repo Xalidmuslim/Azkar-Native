@@ -919,14 +919,16 @@ private fun azkarArabicDisplayText(
     text: String,
     bodySizeSp: Float,
 ): AnnotatedString = buildAnnotatedString {
-    val compactText = text.replace(Regex("\\n[\\t ]*\\n+"), "\n")
+    val compactText = text
+        .replace(Regex("[\\t ]*\\n+[\\t ]*"), "  ")
+        .replace(Regex(" {3,}"), "  ")
     compactText.forEach { character ->
         when (character) {
             '،' -> {
                 pushStyle(
                     SpanStyle(
                         fontFamily = AzkarFontFamilies.NotoNaskhArabic,
-                        fontSize = (bodySizeSp * 0.76f).coerceAtLeast(13f).sp,
+                        fontSize = (bodySizeSp * 1.10f).coerceAtLeast(18f).sp,
                     ),
                 )
                 append(character)
@@ -935,7 +937,7 @@ private fun azkarArabicDisplayText(
             '۝' -> {
                 pushStyle(
                     SpanStyle(
-                        fontSize = (bodySizeSp * 0.20f).coerceAtLeast(5f).sp,
+                        fontSize = (bodySizeSp * 0.10f).coerceAtLeast(3.5f).sp,
                     ),
                 )
                 append(character)
