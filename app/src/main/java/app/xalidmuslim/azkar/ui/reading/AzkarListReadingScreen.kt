@@ -144,9 +144,6 @@ internal fun AzkarListReadingScreen(
                     }
                 }
 
-                item(key = "reader-footer") {
-                    AzkarFooter()
-                }
             }
         }
     }
