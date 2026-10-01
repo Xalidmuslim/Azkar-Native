@@ -515,7 +515,7 @@ private fun AzkarExplanationSheet(
                 }
             }
             practicalApplication?.let { application ->
-                AzkarInsightSection("Как применять смысл", AzkarInsightTone.Practice) {
+                AzkarInsightSection("Как применить сегодня", AzkarInsightTone.Practice) {
                     BasicText(
                         text = application,
                         style = AzkarThemeValues.typography.insightBody.copy(
@@ -605,9 +605,9 @@ private fun AzkarInsightSection(
 private fun AzkarSourceInfoSheet(onDismiss: () -> Unit) {
     val colors = AzkarThemeValues.colors
     AzkarBottomSheet(
-        title = "Источник списка",
+        title = "Об источниках и переводе",
         eyebrow = "",
-        subtitle = "Основа подборки и принцип отображения оценок",
+        subtitle = "Подборка, оценки передач и русский текст",
         maxHeightFraction = 0.56f,
         specificTestTag = "azkar-source-info-sheet",
         onDismiss = onDismiss,
