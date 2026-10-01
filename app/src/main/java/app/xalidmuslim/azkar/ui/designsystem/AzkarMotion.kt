@@ -11,7 +11,7 @@ object AzkarMotion {
     const val progressDurationMillis = 155
     const val toggleDurationMillis = 170
     const val stateTransitionDurationMillis = 155
-    const val themeTransitionDurationMillis = 155
+    const val themeTransitionDurationMillis = 0
 
     val dhikrPageEasing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
     val sheetEasing = dhikrPageEasing
