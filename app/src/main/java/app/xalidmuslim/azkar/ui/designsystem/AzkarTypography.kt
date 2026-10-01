@@ -37,11 +37,11 @@ object AzkarFontFamilies {
     val Inter = variableFamily(R.font.inter_variable)
     val Manrope = variableFamily(R.font.manrope_variable)
     val NotoNaskhArabic = variableFamily(R.font.noto_naskh_arabic_variable)
-    val MushafNaskh = FontFamily(
-        Font(R.font.scheherazade_new_regular, weight = FontWeight.Normal),
-        Font(R.font.scheherazade_new_medium, weight = FontWeight.Medium),
-        Font(R.font.scheherazade_new_semibold, weight = FontWeight.SemiBold),
-        Font(R.font.scheherazade_new_bold, weight = FontWeight.Bold),
+    val UthmanicHafs = FontFamily(
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.Normal),
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.Medium),
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.SemiBold),
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.Bold),
     )
     val AmiriQuran = FontFamily(
         Font(R.font.amiri_quran_regular, weight = FontWeight.Normal),
@@ -67,7 +67,7 @@ object AzkarFontFamilies {
 
     fun arabic(value: ArabicFontFamily): FontFamily = when (value) {
         ArabicFontFamily.NOTO_NASKH_ARABIC -> NotoNaskhArabic
-        ArabicFontFamily.NOTO_SANS_ARABIC -> MushafNaskh
+        ArabicFontFamily.NOTO_SANS_ARABIC -> UthmanicHafs
         ArabicFontFamily.AMIRI -> AmiriQuran
         ArabicFontFamily.SCHEHERAZADE_NEW -> Lateef
     }
