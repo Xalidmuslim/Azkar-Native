@@ -37,16 +37,23 @@ object AzkarFontFamilies {
     val Inter = variableFamily(R.font.inter_variable)
     val Manrope = variableFamily(R.font.manrope_variable)
     val NotoNaskhArabic = variableFamily(R.font.noto_naskh_arabic_variable)
-    val NotoSansArabic = variableFamily(R.font.noto_sans_arabic_variable)
-    val Amiri = FontFamily(
-        Font(R.font.amiri_regular, weight = FontWeight.Normal),
-        Font(R.font.amiri_bold, weight = FontWeight.Bold),
+    val UthmanicHafs = FontFamily(
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.Normal),
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.Medium),
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.SemiBold),
+        Font(R.font.uthmanic_hafs_v18, weight = FontWeight.Bold),
     )
-    val ScheherazadeNew = FontFamily(
-        Font(R.font.scheherazade_new_regular, weight = FontWeight.Normal),
-        Font(R.font.scheherazade_new_medium, weight = FontWeight.Medium),
-        Font(R.font.scheherazade_new_semibold, weight = FontWeight.SemiBold),
-        Font(R.font.scheherazade_new_bold, weight = FontWeight.Bold),
+    val AmiriQuran = FontFamily(
+        Font(R.font.amiri_quran_regular, weight = FontWeight.Normal),
+        Font(R.font.amiri_quran_regular, weight = FontWeight.Medium),
+        Font(R.font.amiri_quran_regular, weight = FontWeight.SemiBold),
+        Font(R.font.amiri_quran_regular, weight = FontWeight.Bold),
+    )
+    val Lateef = FontFamily(
+        Font(R.font.lateef_regular, weight = FontWeight.Normal),
+        Font(R.font.lateef_medium, weight = FontWeight.Medium),
+        Font(R.font.lateef_semibold, weight = FontWeight.SemiBold),
+        Font(R.font.lateef_bold, weight = FontWeight.Bold),
     )
 
     fun russian(value: RussianFontFamily): FontFamily = when (value) {
@@ -60,9 +67,9 @@ object AzkarFontFamilies {
 
     fun arabic(value: ArabicFontFamily): FontFamily = when (value) {
         ArabicFontFamily.NOTO_NASKH_ARABIC -> NotoNaskhArabic
-        ArabicFontFamily.NOTO_SANS_ARABIC -> NotoSansArabic
-        ArabicFontFamily.AMIRI -> Amiri
-        ArabicFontFamily.SCHEHERAZADE_NEW -> ScheherazadeNew
+        ArabicFontFamily.NOTO_SANS_ARABIC -> UthmanicHafs
+        ArabicFontFamily.AMIRI -> AmiriQuran
+        ArabicFontFamily.SCHEHERAZADE_NEW -> Lateef
     }
 }
 
@@ -120,8 +127,8 @@ object AzkarTypography {
     )
 
     fun create(
-        russianFont: RussianFontFamily = RussianFontFamily.LITERATA,
-        arabicFont: ArabicFontFamily = ArabicFontFamily.NOTO_NASKH_ARABIC,
+        russianFont: RussianFontFamily = RussianFontFamily.ANDROID_SANS,
+        arabicFont: ArabicFontFamily = ArabicFontFamily.NOTO_SANS_ARABIC,
         arabicSizeSp: Float = AzkarDimensions.defaultArabicSizeSp,
         russianSizeSp: Float = AzkarDimensions.defaultRussianSizeSp,
         readerLineHeight: Float = AzkarDimensions.defaultReaderLineHeight,
@@ -132,18 +139,18 @@ object AzkarTypography {
         val literata = AzkarFontFamilies.Literata
 
         return AzkarTypographySet(
-            brandTitle = TextStyle(fontFamily = literata, fontWeight = FontWeight.Bold, fontSize = 23.sp, lineHeight = 24.15.sp),
-            brandSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 10.sp, lineHeight = 10.sp, letterSpacing = 0.11.em),
-            sourceNote = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 15.95.sp),
-            periodButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
-            progressLabel = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 11.sp),
-            progressCount = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 13.sp),
-            resetTextButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 10.sp),
-            toolbarButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 10.sp),
-            toolbarPosition = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 10.sp),
-            cardNumber = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 10.sp),
-            cardHeading = TextStyle(fontFamily = reader, fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 19.5.sp),
-            disputeBadge = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 9.sp),
+            brandTitle = TextStyle(fontFamily = literata, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 26.sp),
+            brandSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 12.sp, letterSpacing = 0.11.em),
+            sourceNote = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp),
+            periodButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+            progressLabel = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 13.sp),
+            progressCount = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 14.sp),
+            resetTextButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+            toolbarButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+            toolbarPosition = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 12.sp),
+            cardNumber = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 12.sp),
+            cardHeading = TextStyle(fontFamily = reader, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = 21.sp),
+            disputeBadge = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
             arabicBody = TextStyle(
                 fontFamily = arabic,
                 fontWeight = FontWeight.Medium,
@@ -162,35 +169,40 @@ object AzkarTypography {
                 platformStyle = PlatformTextStyle(includeFontPadding = false),
                 lineHeightStyle = noTrim,
             ),
-            sourceRow = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 10.sp, lineHeight = 14.5.sp),
-            noteBox = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 10.sp, lineHeight = 14.5.sp),
-            explainButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, lineHeight = 12.sp),
-            counter = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 12.sp),
-            counterNumber = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 20.sp),
-            countButton = TextStyle(fontFamily = reader, fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-            pagerButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
-            pagerCenter = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 9.sp),
-            pagerActiveNumber = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 14.sp),
-            pagerHelper = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 7.sp),
-            footer = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 9.sp, lineHeight = 13.5.sp),
-            sheetEyebrow = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 8.sp, letterSpacing = 0.08.em),
-            sheetTitle = TextStyle(fontFamily = literata, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 21.6.sp),
-            sheetSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 10.sp, lineHeight = 13.5.sp),
-            contentsTitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 13.75.sp),
-            contentsSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 8.sp),
-            sectionHeading = TextStyle(fontFamily = inter, fontWeight = FontWeight.Bold, fontSize = 11.sp),
-            insightBody = TextStyle(fontFamily = reader, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 20.54.sp),
-            insightReferences = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 9.sp, lineHeight = 12.15.sp),
-            fontTileTitle = TextStyle(fontFamily = reader, fontSize = 11.sp, lineHeight = 12.1.sp),
-            fontTileSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 7.sp, lineHeight = 7.7.sp),
-            fontTileSample = TextStyle(fontFamily = reader, fontSize = 10.sp, lineHeight = 10.5.sp),
-            arabicFontTileSample = TextStyle(fontFamily = arabic, fontSize = 17.sp),
-            sliderLabel = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 8.sp),
-            sliderValue = TextStyle(fontFamily = inter, fontWeight = FontWeight.Bold, fontSize = 9.sp),
-            toggleText = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 8.sp),
-            themeRowTitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 9.sp),
-            themeRowSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 7.sp),
-            themeSelect = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 9.sp),
+            sourceRow = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.sp),
+            noteBox = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.sp),
+            explainButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 14.sp),
+            counter = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 14.sp),
+            counterNumber = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 22.sp),
+            countButton = TextStyle(fontFamily = reader, fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
+            pagerButton = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+            pagerCenter = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 11.sp),
+            pagerActiveNumber = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 15.sp),
+            pagerHelper = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 10.sp),
+            footer = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 16.sp),
+            sheetEyebrow = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, letterSpacing = 0.08.em),
+            sheetTitle = TextStyle(fontFamily = literata, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 24.sp),
+            sheetSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
+            contentsTitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 16.sp),
+            contentsSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 10.sp),
+            sectionHeading = TextStyle(fontFamily = inter, fontWeight = FontWeight.Bold, fontSize = 13.sp),
+            insightBody = TextStyle(fontFamily = reader, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.5.sp),
+            insightReferences = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 15.sp),
+            fontTileTitle = TextStyle(fontFamily = reader, fontSize = 13.sp, lineHeight = 15.sp),
+            fontTileSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 10.sp, lineHeight = 12.sp),
+            fontTileSample = TextStyle(fontFamily = reader, fontSize = 12.sp, lineHeight = 14.sp),
+            arabicFontTileSample = TextStyle(
+                fontFamily = arabic,
+                fontSize = 18.sp,
+                lineHeight = 25.sp,
+                platformStyle = PlatformTextStyle(includeFontPadding = true),
+            ),
+            sliderLabel = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 11.sp),
+            sliderValue = TextStyle(fontFamily = inter, fontWeight = FontWeight.Bold, fontSize = 12.sp),
+            toggleText = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
+            themeRowTitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+            themeRowSubtitle = TextStyle(fontFamily = inter, fontWeight = FontWeight.Normal, fontSize = 10.sp),
+            themeSelect = TextStyle(fontFamily = inter, fontWeight = FontWeight.Medium, fontSize = 12.sp),
         )
     }
 }

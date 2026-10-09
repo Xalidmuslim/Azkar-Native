@@ -1,0 +1,70 @@
+name: Phase 6 Manual APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - azkar-native-phase6-app-integration-2026-09-30
+      - azkar-reader-polish-v2-2026-10-01
+
+permissions:
+  contents: read
+
+jobs:
+  build-manual-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Assemble debug APK only
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Verify manual APK identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$AAPT"
+
+          BADGING="$("$AAPT" dump badging "$APK")"
+          PERMISSIONS="$("$AAPT" dump permissions "$APK")"
+
+          grep -Fq "package: name='app.xalidmuslim.azkar'" <<<"$BADGING"
+          grep -Fq "application-label:'Азкар'" <<<"$BADGING"
+          grep -Fq "launchable-activity: name='app.xalidmuslim.azkar.MainActivity'" <<<"$BADGING"
+
+          if grep -Fq "android.permission.INTERNET" <<<"$PERMISSIONS"; then
+            echo "Unexpected INTERNET permission in APK" >&2
+            exit 1
+          fi
+
+          echo "APK filename: $(basename "$APK")"
+          echo "APK size bytes: $(stat -c%s "$APK")"
+          echo "Package: app.xalidmuslim.azkar"
+          echo "App label: Азкар"
+          echo "Launcher: app.xalidmuslim.azkar.MainActivity"
+          echo "Internet permission: absent"
+
+      - name: Upload manual debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: azkar-phase6-manual-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

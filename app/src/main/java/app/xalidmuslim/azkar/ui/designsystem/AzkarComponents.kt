@@ -7,8 +7,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,16 +21,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 
 internal fun Modifier.azkarShadow(
     layers: List<AzkarShadowLayer>,
@@ -70,6 +81,7 @@ fun AzkarSurface(
 fun AzkarCardSurface(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    completed: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = AzkarThemeValues.colors
@@ -77,13 +89,27 @@ fun AzkarCardSurface(
     val horizontal = if (compact) AzkarSpacing.compactCard else AzkarSpacing.cardHorizontal
     val bottom = if (compact) AzkarSpacing.compactCard else AzkarSpacing.cardBottom
     val shape = RoundedCornerShape(AzkarRadius.dhikrCard)
+    val cardBackground = if (completed) colors.doneMarkerBackground else colors.card
+    val cardBorder = if (completed) colors.doneCardBorder else colors.border
 
     Box(
         modifier = modifier
             .azkarShadow(AzkarThemeValues.elevation.card, AzkarRadius.dhikrCard)
             .clip(shape)
-            .background(colors.card)
-            .border(AzkarBorders.thin, colors.border, shape)
+            .background(cardBackground)
+            .drawBehind {
+                if (completed) {
+                    drawRect(
+                        color = colors.success,
+                        size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height),
+                    )
+                }
+            }
+            .border(
+                AzkarBorders.thin,
+                cardBorder,
+                shape,
+            )
             .padding(start = horizontal, end = horizontal, top = top, bottom = bottom),
         content = content,
     )
@@ -98,11 +124,21 @@ fun AzkarPrimaryButton(
 ) {
     val colors = AzkarThemeValues.colors
     val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        animationSpec = tween(AzkarMotion.toggleDurationMillis),
+        label = "primary-press",
+    )
     val background = if (enabled) colors.primary else colors.surface
     val foreground = if (enabled) colors.countButtonText else colors.muted
 
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .defaultMinSize(
                 minWidth = AzkarDimensions.countButtonMinWidth,
                 minHeight = AzkarDimensions.countButtonMinHeight,
@@ -135,10 +171,20 @@ fun AzkarOutlineButton(
 ) {
     val colors = AzkarThemeValues.colors
     val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        animationSpec = tween(AzkarMotion.toggleDurationMillis),
+        label = "outline-press",
+    )
     val shape = RoundedCornerShape(AzkarRadius.explainButton)
 
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .fillMaxWidth()
             .defaultMinSize(minHeight = AzkarDimensions.explainButtonMinHeight)
             .clip(shape)
@@ -174,6 +220,12 @@ fun AzkarIconButton(
 ) {
     val colors = AzkarThemeValues.colors
     val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        animationSpec = tween(AzkarMotion.toggleDurationMillis),
+        label = "icon-press",
+    )
     val dimension = when (size) {
         AzkarIconButtonSize.Standard -> AzkarDimensions.settingsIconButton
         AzkarIconButtonSize.Compact -> AzkarDimensions.compactIconButton
@@ -186,6 +238,10 @@ fun AzkarIconButton(
 
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .size(dimension)
             .clip(shape)
             .background(colors.card)
@@ -251,6 +307,12 @@ fun AzkarProgressBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .semantics {
+                progressBarRangeInfo = ProgressBarRangeInfo(
+                    current = displayed,
+                    range = 0f..1f,
+                )
+            }
             .height(AzkarDimensions.progressTrackHeight)
             .clip(RoundedCornerShape(AzkarRadius.pill))
             .background(colors.surface),
@@ -262,5 +324,56 @@ fun AzkarProgressBar(
                 .clip(RoundedCornerShape(AzkarRadius.pill))
                 .background(colors.primary),
         )
+    }
+}
+
+
+@Composable
+fun AzkarConfirmDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = AzkarThemeValues.colors
+    val shape = RoundedCornerShape(18.dp)
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(colors.card)
+                .border(AzkarBorders.thin, colors.border, shape)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            BasicText(
+                text = title,
+                style = AzkarThemeValues.typography.sheetTitle.copy(color = colors.foreground),
+            )
+            BasicText(
+                text = message,
+                style = AzkarThemeValues.typography.sheetSubtitle.copy(color = colors.muted),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AzkarOutlineButton(
+                    text = "Отмена",
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                )
+                AzkarPrimaryButton(
+                    text = confirmText,
+                    onClick = {
+                        onConfirm()
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
